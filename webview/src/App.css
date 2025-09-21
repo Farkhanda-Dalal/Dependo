@@ -45,12 +45,26 @@ body {
   color: var(--neutral-700);
 }
 
-.app-container {
+/* .app-container {
   width: 100vw;
   height: 100vh;
   background: linear-gradient(135deg, var(--neutral-50) 0%, var(--neutral-100) 100%);
   position: relative;
   overflow: hidden;
+} */
+
+/* src/App.css */
+/* ... (existing styles) ... */
+
+.app-container {
+    display: flex; /* This is the key change for a side-by-side layout */
+    height: 100vh;
+}
+
+.main-content {
+    flex-grow: 1; /* This makes the main content take up the remaining space */
+    display: flex;
+    flex-direction: column;
 }
 
 .graph-container {
@@ -65,36 +79,46 @@ body {
 }
 
 /* Header Overlay */
-.graph-header {
+.graph-panel {
   position: absolute;
   top: 20px;
-  left: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* spacing between controls and header */
   z-index: 1000;
+}
+
+/* Controls and header now share same floating style */
+.graph-controls,
+.graph-header {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
-  padding: 16px 24px;
+  padding: 16px;
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-md);
   border: var(--border-width) solid var(--neutral-200);
-  min-width: 280px;
 }
 
+/* keep header text styles */
 .graph-title {
   font-size: 18px;
   font-weight: 600;
   color: var(--neutral-800);
   margin: 0 0 8px 0;
-  letter-spacing: -0.02em;
 }
 
-.graph-subtitle {
-  font-size: 14px;
-  color: var(--neutral-500);
-  margin: 0;
-  font-weight: 400;
+/* .graph-header {
+  position: relative; 
+  margin-top: 0;      
+  margin-bottom: 1rem;
+  padding: 0;          
+  z-index: auto;     
+  top: 6rem;  
+  left: 1rem;
+  width: 300px; 
 }
 
-/* Controls Panel */
 .graph-controls {
   position: absolute;
   top: 20px;
@@ -110,6 +134,23 @@ body {
   gap: 8px;
   flex-direction: column;
 }
+
+.graph-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--neutral-800);
+  margin: 0 0 8px 0;
+  letter-spacing: -0.02em;
+} */
+
+.graph-subtitle {
+  font-size: 14px;
+  color: var(--neutral-500);
+  margin: 0;
+  font-weight: 400;
+}
+
+
 
 .control-button {
   background: var(--primary-blue);

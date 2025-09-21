@@ -1,35 +1,39 @@
-import { useEffect, useState, useRef } from 'react';
-import { Network, type Data, type Options } from 'vis-network/standalone';
-import type { GraphData } from '../../src/parser';
-import './App.css';
-import LoadingState from './components/LoadingState';
-import EmptyProject from './components/EmptyProject';
+// App.tsx
+import { useEffect, useState, useRef } from "react";
+import { Network, type Data, type Options } from "vis-network/standalone";
+import type { GraphData } from "../../src/parser";
+import "./App.css";
+import LoadingState from "./components/LoadingState";
+import EmptyProject from "./components/EmptyProject";
+import Sidebar from "./components/Sidebar"; // <-- Import the new Sidebar component
 
-// Create a specific type for the VS Code API
-interface VscodeApi {
-  postMessage(message: unknown): void;
-}
-
-declare global {
-  interface Window {
-    acquireVsCodeApi: () => VscodeApi;
-  }
-}
+// ... (existing VscodeApi and global Window interface) ...
 
 function App() {
-  const [allGraphData, setAllGraphData] = useState<GraphData>({ nodes: [], links: [] });
-  const [filteredGraphData, setFilteredGraphData] = useState<GraphData>({ nodes: [], links: [] });
+  const [allGraphData, setAllGraphData] = useState<GraphData>({
+    nodes: [],
+    links: [],
+  });
+  const [filteredGraphData, setFilteredGraphData] = useState<GraphData>({
+    nodes: [],
+    links: [],
+  });
   const [isLoading, setIsLoading] = useState(true);
+  const [folders, setFolders] = useState({}); // <-- Add new state for folders
   const containerRef = useRef<HTMLDivElement | null>(null);
   const networkRef = useRef<Network | null>(null);
 
   useEffect(() => {
     setIsLoading(true);
-    fetch('http://localhost:3001/api/graph')
-      .then(response => response.json())
-      .then((data: GraphData) => {
-        setAllGraphData(data); // Store the full graph data
-        setFilteredGraphData(data); // Initially display the full graph
+    // Fetch both graph and folder data in parallel
+    Promise.all([
+      fetch("http://localhost:3001/api/graph").then((res) => res.json()),
+      fetch("http://localhost:3001/api/folders").then((res) => res.json()),
+    ])
+      .then(([graphData, folderData]) => {
+        setAllGraphData(graphData);
+        setFilteredGraphData(graphData);
+        setFolders(folderData); // <-- Set the folder data in state
         setIsLoading(false);
       })
       .catch(() => {
@@ -43,49 +47,79 @@ function App() {
     }
   };
 
-  const resetPhysics = () => {
-    if (networkRef.current) {
-      networkRef.current.setOptions({ physics: { enabled: true } });
-      networkRef.current.stabilize();
+  const handleSearch = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      const query = event.currentTarget.value.toLowerCase();
+      if (query === "") {
+        setFilteredGraphData(allGraphData);
+      } else {
+        const matchingNodes = allGraphData.nodes.filter((node) =>
+          node.id.toLowerCase().includes(query)
+        );
+        const matchingNodeIds = new Set(matchingNodes.map((node) => node.id));
+
+        const filteredLinks = allGraphData.links.filter(
+          (link) =>
+            matchingNodeIds.has(link.source) || matchingNodeIds.has(link.target)
+        );
+
+        const allRelatedNodeIds = new Set<string>();
+        filteredLinks.forEach((link) => {
+          allRelatedNodeIds.add(link.source);
+          allRelatedNodeIds.add(link.target);
+        });
+
+        const filteredNodes = allGraphData.nodes.filter((node) =>
+          allRelatedNodeIds.has(node.id)
+        );
+
+        setFilteredGraphData({ nodes: filteredNodes, links: filteredLinks });
+      }
     }
   };
 
-const handleSearch = (event: React.KeyboardEvent<HTMLInputElement>) => {
-  if (event.key === 'Enter') {
-    const query = event.currentTarget.value.toLowerCase();
-    if (query === '') {
-      setFilteredGraphData(allGraphData);
-    } else {
-      const matchingNodes = allGraphData.nodes.filter(node => node.id.toLowerCase().includes(query));
-      const matchingNodeIds = new Set(matchingNodes.map(node => node.id));
+  const handleFolderClick = (folderPath: string) => {
+    const folderPrefix = folderPath === "root" ? "" : folderPath + "/";
 
-      const filteredLinks = allGraphData.links.filter(link => 
-        matchingNodeIds.has(link.source) || 
-        matchingNodeIds.has(link.target)
-      );
-      
-      const allRelatedNodeIds = new Set<string>();
-      filteredLinks.forEach(link => {
-        allRelatedNodeIds.add(link.source);
-        allRelatedNodeIds.add(link.target);
-      });
+    const filteredNodes = allGraphData.nodes.filter((node) =>
+      node.id.startsWith(folderPrefix)
+    );
 
-      const filteredNodes = allGraphData.nodes.filter(node => allRelatedNodeIds.has(node.id));
-      
-      setFilteredGraphData({ nodes: filteredNodes, links: filteredLinks });
-    }
-  }
-};
+    const filteredLinks = allGraphData.links.filter(
+      (link) =>
+        link.source.startsWith(folderPrefix) ||
+        link.target.startsWith(folderPrefix)
+    );
+
+    const allRelatedNodeIds = new Set<string>();
+    filteredLinks.forEach((link) => {
+      allRelatedNodeIds.add(link.source);
+      allRelatedNodeIds.add(link.target);
+    });
+
+    // Add nodes from the filtered folder but not in the links to the graph.
+    filteredNodes.forEach((node) => allRelatedNodeIds.add(node.id));
+
+    const finalNodes = allGraphData.nodes.filter((node) =>
+      allRelatedNodeIds.has(node.id)
+    );
+
+    setFilteredGraphData({ nodes: finalNodes, links: filteredLinks });
+  };
 
   useEffect(() => {
     if (containerRef.current && filteredGraphData.nodes.length > 0) {
       const visData: Data = {
-        nodes: filteredGraphData.nodes.map(node => ({ 
-          id: node.id, 
-          label: node.id.length > 20 ? node.id.substring(0, 20) + '...' : node.id,
-          title: node.id
+        nodes: filteredGraphData.nodes.map((node) => ({
+          id: node.id,
+          label:
+            node.id.length > 20 ? node.id.substring(0, 20) + "..." : node.id,
+          title: node.id,
         })),
-        edges: filteredGraphData.links.map(link => ({ from: link.source, to: link.target })),
+        edges: filteredGraphData.links.map((link) => ({
+          from: link.source,
+          to: link.target,
+        })),
       };
 
       const options: Options = {
@@ -103,92 +137,92 @@ const handleSearch = (event: React.KeyboardEvent<HTMLInputElement>) => {
             avoidOverlap: 0.8,
           },
           minVelocity: 0.75,
-          solver: 'barnesHut',
+          solver: "barnesHut",
         },
         nodes: {
-          shape: 'box',
+          shape: "box",
           font: {
-            color: '#374151',
+            color: "#374151",
             face: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            size: 14
+            size: 14,
           },
           color: {
-            background: '#f8fafc',
-            border: '#0066cc',
+            background: "#f8fafc",
+            border: "#0066cc",
             highlight: {
-              background: '#dbeafe',
-              border: '#2563eb'
+              background: "#dbeafe",
+              border: "#2563eb",
             },
             hover: {
-              background: '#eff6ff',
-              border: '#3b82f6'
-            }
+              background: "#eff6ff",
+              border: "#3b82f6",
+            },
           },
           margin: { top: 12, right: 16, bottom: 12, left: 16 },
           borderWidth: 2,
           borderWidthSelected: 3,
           shadow: {
             enabled: true,
-            color: 'rgba(37, 99, 235, 0.15)',
+            color: "rgba(37, 99, 235, 0.15)",
             size: 8,
             x: 0,
-            y: 2
-          }
+            y: 2,
+          },
         },
         edges: {
           color: {
-            color: '#60a5fa',
-            highlight: '#2563eb',
-            hover: '#3b82f6',
-            inherit: false
+            color: "#60a5fa",
+            highlight: "#2563eb",
+            hover: "#3b82f6",
+            inherit: false,
           },
           width: 2,
           widthConstraint: {
-            maximum: 4
+            maximum: 4,
           },
           font: {
-            align: 'middle',
+            align: "middle",
             size: 12,
-            color: '#1e40af',
-            background: '#ffffff',
+            color: "#1e40af",
+            background: "#ffffff",
             strokeWidth: 3,
-            strokeColor: '#ffffff'
+            strokeColor: "#ffffff",
           },
           arrows: {
             to: {
               enabled: true,
               scaleFactor: 1.2,
-              type: 'arrow'
-            }
+              type: "arrow",
+            },
           },
           smooth: {
             enabled: true,
-            type: 'dynamic',
-            roundness: 0.5
+            type: "dynamic",
+            roundness: 0.5,
           },
           shadow: {
             enabled: true,
-            color: 'rgba(59, 130, 246, 0.1)',
+            color: "rgba(59, 130, 246, 0.1)",
             size: 4,
             x: 0,
-            y: 1
-          }
+            y: 1,
+          },
         },
         interaction: {
           hover: true,
           tooltipDelay: 200,
           hideEdgesOnDrag: false,
-          hideNodesOnDrag: false
+          hideNodesOnDrag: false,
         },
         configure: {
-          enabled: false
-        }
+          enabled: false,
+        },
       };
 
       const network = new Network(containerRef.current, visData, options);
       networkRef.current = network;
 
-      network.on('stabilizationIterationsDone', () => {
+      network.on("stabilizationIterationsDone", () => {
         network.setOptions({ physics: false });
       });
 
@@ -200,55 +234,60 @@ const handleSearch = (event: React.KeyboardEvent<HTMLInputElement>) => {
   const edgeCount = filteredGraphData.links.length;
 
   if (isLoading) {
-    return (
-      <LoadingState></LoadingState>
-    );
+    return <LoadingState></LoadingState>;
   }
 
   if (nodeCount === 0) {
-    return (
-      <EmptyProject></EmptyProject>
-    );
+    return <EmptyProject></EmptyProject>;
   }
 
   return (
     <div className="app-container">
-      <div className="graph-header">
-        <h1 className="graph-title">Dependency Graph</h1>
-        <p className="graph-subtitle">Visual representation of your project's dependencies</p>
-        <input
-          type="text"
-          placeholder="Search by file name..."
-          onKeyDown={handleSearch}
-          className="search-input"
-        />
-      </div>
+      {/* The Sidebar component will go here */}
+      <Sidebar folders={folders} onFolderClick={handleFolderClick} />
 
-      <div className="graph-controls">
-        <button className="control-button" onClick={fitNetwork}>
-          🎯 Fit View
-        </button>
-        <button className="control-button secondary" onClick={resetPhysics}>
-          ⚡ Reset Layout
-        </button>
-      </div>
+      <div className="main-content">
+        <div className="graph-panel">
+            
+          <div className="graph-header">
+            <h1 className="graph-title">Dependency Graph</h1>
+            <p className="graph-subtitle">
+              Visual representation of your project's dependencies
+            </p>
+            <input
+              type="text"
+              placeholder="Search by file name..."
+              onKeyDown={handleSearch}
+              className="search-input"
+            />
+          </div>
 
-      <div className="graph-stats">
-        <div className="stat-item">
-          <div className="stat-value">{nodeCount}</div>
-          <div className="stat-label">Files</div>
+          <button className="control-button" onClick={fitNetwork}>
+              🎯 Fit View
+            </button>
         </div>
-        <div className="stat-item">
-          <div className="stat-value">{edgeCount}</div>
-          <div className="stat-label">Dependencies</div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-value">{edgeCount > 0 ? Math.round((edgeCount / nodeCount) * 10) / 10 : 0}</div>
-          <div className="stat-label">Avg. Deps</div>
-        </div>
-      </div>
 
-      <div ref={containerRef} className="graph-container"></div>
+        <div className="graph-stats">
+          <div className="stat-item">
+            <div className="stat-value">{nodeCount}</div>
+            <div className="stat-label">Files</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value">{edgeCount}</div>
+            <div className="stat-label">Dependencies</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value">
+              {edgeCount > 0
+                ? Math.round((edgeCount / nodeCount) * 10) / 10
+                : 0}
+            </div>
+            <div className="stat-label">Avg. Deps</div>
+          </div>
+        </div>
+
+        <div ref={containerRef} className="graph-container"></div>
+      </div>
     </div>
   );
 }

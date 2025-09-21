@@ -282,6 +282,8 @@ function App() {
           tooltipDelay: 200,
           hideEdgesOnDrag: false,
           hideNodesOnDrag: false,
+          dragView: true,
+          zoomView: true,
         },
         configure: {
           enabled: false,
@@ -296,6 +298,24 @@ function App() {
       });
 
       network.fit();
+
+      const canvas = containerRef.current;
+      
+      network.on("hoverNode", () => {
+        if (canvas) canvas.style.cursor = "pointer";
+      });
+      network.on("blurNode", () => {
+        if (canvas) canvas.style.cursor = "grab";
+      });
+
+      network.on("dragStart", () => {
+        if (canvas) canvas.style.cursor = "grabbing";
+      });
+      network.on("dragEnd", () => {
+        if (canvas) canvas.style.cursor = "grab";
+      });
+      
+      if (canvas) canvas.style.cursor = "grab";
     }
   }, [filteredGraphData]);
 

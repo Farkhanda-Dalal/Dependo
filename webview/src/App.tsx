@@ -5,9 +5,18 @@ import type { GraphData } from "../../src/parser";
 import "./App.css";
 import LoadingState from "./components/LoadingState";
 import EmptyProject from "./components/EmptyProject";
-import Sidebar from "./components/Sidebar"; // <-- Import the new Sidebar component
+import Sidebar from "./components/Sidebar";
 
-// ... (existing VscodeApi and global Window interface) ...
+// Create a specific type for the VS Code API
+interface VscodeApi {
+  postMessage(message: unknown): void;
+}
+
+declare global {
+  interface Window {
+    acquireVsCodeApi: () => VscodeApi;
+  }
+}
 
 function App() {
   const [allGraphData, setAllGraphData] = useState<GraphData>({
@@ -19,13 +28,12 @@ function App() {
     links: [],
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [folders, setFolders] = useState({}); // <-- Add new state for folders
+  const [folders, setFolders] = useState({});
   const containerRef = useRef<HTMLDivElement | null>(null);
   const networkRef = useRef<Network | null>(null);
 
   useEffect(() => {
     setIsLoading(true);
-    // Fetch both graph and folder data in parallel
     Promise.all([
       fetch("http://localhost:3001/api/graph").then((res) => res.json()),
       fetch("http://localhost:3001/api/folders").then((res) => res.json()),
@@ -33,7 +41,7 @@ function App() {
       .then(([graphData, folderData]) => {
         setAllGraphData(graphData);
         setFilteredGraphData(graphData);
-        setFolders(folderData); // <-- Set the folder data in state
+        setFolders(folderData);
         setIsLoading(false);
       })
       .catch(() => {
@@ -79,32 +87,93 @@ function App() {
   };
 
   const handleFolderClick = (folderPath: string) => {
-    const folderPrefix = folderPath === "root" ? "" : folderPath + "/";
-
-    const filteredNodes = allGraphData.nodes.filter((node) =>
-      node.id.startsWith(folderPrefix)
+    console.log("Folder Clicked:", folderPath);
+    console.log(
+      "All graph nodes:",
+      allGraphData.nodes.map((n) => n.id)
     );
 
-    const filteredLinks = allGraphData.links.filter(
-      (link) =>
-        link.source.startsWith(folderPrefix) ||
-        link.target.startsWith(folderPrefix)
-    );
+    // Normalize folder path - ensure it uses forward slashes
+    const normalizedFolderPath = folderPath.replace(/\\/g, "/");
+    const query =
+      normalizedFolderPath === "root" ? "" : `${normalizedFolderPath}/`;
+    console.log("Query string:", query);
 
-    const allRelatedNodeIds = new Set<string>();
-    filteredLinks.forEach((link) => {
-      allRelatedNodeIds.add(link.source);
-      allRelatedNodeIds.add(link.target);
-    });
+    if (query === "") {
+      setFilteredGraphData(allGraphData);
+    } else {
+      const matchingNodes = allGraphData.nodes.filter((node) => {
+        const nodeId = node.id.toLowerCase();
+        const queryLower = query.toLowerCase();
+        console.log(
+          `Checking if "${nodeId}" starts with "${queryLower}":`,
+          nodeId.startsWith(queryLower)
+        );
+        return nodeId.startsWith(queryLower);
+      });
+      console.log("Nodes within folder:", matchingNodes);
 
-    // Add nodes from the filtered folder but not in the links to the graph.
-    filteredNodes.forEach((node) => allRelatedNodeIds.add(node.id));
+      if (matchingNodes.length === 0) {
+        console.log(
+          "No direct matches found, checking for any nodes containing the folder path..."
+        );
+        // Try a more flexible search - find nodes that contain the folder path anywhere
+        const flexibleMatchingNodes = allGraphData.nodes.filter((node) => {
+          const nodeId = node.id.toLowerCase();
+          const folderPathLower = normalizedFolderPath.toLowerCase();
+          return nodeId.includes(folderPathLower);
+        });
 
-    const finalNodes = allGraphData.nodes.filter((node) =>
-      allRelatedNodeIds.has(node.id)
-    );
+        if (flexibleMatchingNodes.length > 0) {
+          console.log(
+            "Found nodes with flexible matching:",
+            flexibleMatchingNodes
+          );
+          const matchingNodeIds = new Set(
+            flexibleMatchingNodes.map((node) => node.id)
+          );
+          const filteredLinks = allGraphData.links.filter(
+            (link) =>
+              matchingNodeIds.has(link.source) ||
+              matchingNodeIds.has(link.target)
+          );
 
-    setFilteredGraphData({ nodes: finalNodes, links: filteredLinks });
+          const allRelatedNodeIds = new Set<string>();
+          filteredLinks.forEach((link) => {
+            allRelatedNodeIds.add(link.source);
+            allRelatedNodeIds.add(link.target);
+          });
+
+          const filteredNodes = allGraphData.nodes.filter((node) =>
+            allRelatedNodeIds.has(node.id)
+          );
+
+          setFilteredGraphData({ nodes: filteredNodes, links: filteredLinks });
+        } else {
+          console.log("No nodes found even with flexible matching");
+          setFilteredGraphData({ nodes: [], links: [] });
+        }
+        return;
+      }
+
+      const matchingNodeIds = new Set(matchingNodes.map((node) => node.id));
+      const filteredLinks = allGraphData.links.filter(
+        (link) =>
+          matchingNodeIds.has(link.source) || matchingNodeIds.has(link.target)
+      );
+
+      const allRelatedNodeIds = new Set<string>();
+      filteredLinks.forEach((link) => {
+        allRelatedNodeIds.add(link.source);
+        allRelatedNodeIds.add(link.target);
+      });
+
+      const filteredNodes = allGraphData.nodes.filter((node) =>
+        allRelatedNodeIds.has(node.id)
+      );
+
+      setFilteredGraphData({ nodes: filteredNodes, links: filteredLinks });
+    }
   };
 
   useEffect(() => {
@@ -237,7 +306,7 @@ function App() {
     return <LoadingState></LoadingState>;
   }
 
-  if (nodeCount === 0) {
+  if (nodeCount === 0 && edgeCount === 0) {
     return <EmptyProject></EmptyProject>;
   }
 
@@ -248,7 +317,6 @@ function App() {
 
       <div className="main-content">
         <div className="graph-panel">
-            
           <div className="graph-header">
             <h1 className="graph-title">Dependency Graph</h1>
             <p className="graph-subtitle">
@@ -263,8 +331,8 @@ function App() {
           </div>
 
           <button className="control-button" onClick={fitNetwork}>
-              🎯 Fit View
-            </button>
+            🎯 Fit View
+          </button>
         </div>
 
         <div className="graph-stats">

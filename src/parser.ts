@@ -7,13 +7,13 @@ import resolve from "resolve";
 // Your existing interface. We will not touch this.
 export interface GraphData {
   nodes: { id: string }[];
-  links: { source: string; target: string }[];
+  links: { source: string; target: string; specifiers?: string[] }[];
 }
 
 // Defines the structure for a single circular dependency found.
 export interface Cycle {
   nodes: string[];
-  links: { source: string; target: string }[];
+  links: { source: string; target: string; specifiers?: string[] }[];
 }
 
 // This new interface extends your original GraphData and adds the cycles array.
@@ -29,13 +29,16 @@ export interface EnhancedGraphData extends GraphData {
  * @param links The directed edges of the graph.
  * @returns An array of cycles found in the graph.
  */
-function detectCycles(nodes: { id: string }[], links: { source: string; target: string }[]): Cycle[] {
+function detectCycles(
+  nodes: { id: string }[],
+  links: { source: string; target: string; specifiers?: string[] }[]
+): Cycle[] {
   const adjList = new Map<string, string[]>();
   const allCycles: Cycle[] = [];
   const foundCycles = new Set<string>(); // Stores a unique key for each found cycle to prevent duplicates.
 
   // 1. Build an adjacency list for efficient traversal.
-  links.forEach(link => {
+  links.forEach((link) => {
     if (!adjList.has(link.source)) {
       adjList.set(link.source, []);
     }
@@ -61,13 +64,20 @@ function detectCycles(nodes: { id: string }[], links: { source: string; target: 
         const cycleNodes = path.slice(cycleStartIndex);
 
         // To avoid duplicates, create a sorted, canonical representation of the cycle.
-        const canonicalCycleKey = cycleNodes.slice().sort().join(',');
+        const canonicalCycleKey = cycleNodes.slice().sort().join(",");
         if (!foundCycles.has(canonicalCycleKey)) {
           const cycleLinks = [];
           for (let i = 0; i < cycleNodes.length; i++) {
+            const source = cycleNodes[i];
+            const target = cycleNodes[(i + 1) % cycleNodes.length];
+            // Find the original link to get specifiers
+            const originalLink = links.find(
+              (l) => l.source === source && l.target === target
+            );
             cycleLinks.push({
-              source: cycleNodes[i],
-              target: cycleNodes[(i + 1) % cycleNodes.length] // Connect back to the start
+              source: source,
+              target: target, // Connect back to the start
+              specifiers: originalLink?.specifiers,
             });
           }
           allCycles.push({ nodes: cycleNodes, links: cycleLinks });
@@ -87,7 +97,6 @@ function detectCycles(nodes: { id: string }[], links: { source: string; target: 
 }
 
 // --- NEW FUNCTION: detectCycles ENDS HERE ---
-
 
 const excludedPatterns = [
   /\.config\.js$/,
@@ -157,8 +166,21 @@ export async function getDependencyGraph(): Promise<EnhancedGraphData> {
 
         for (const node of ast.program.body) {
           let importPath: string | null = null;
+          let specifiers: string[] = [];
           if (node.type === "ImportDeclaration") {
             importPath = node.source.value;
+            specifiers = node.specifiers.map((specifier) => {
+              if (specifier.type === "ImportDefaultSpecifier") {
+                return `${specifier.local.name} (default)`;
+              } else if (specifier.type === "ImportNamespaceSpecifier") {
+                return `* as ${specifier.local.name}`;
+              } else {
+                // specifier is ImportSpecifier
+                return specifier.imported.type === "Identifier"
+                  ? specifier.imported.name
+                  : specifier.imported.value;
+              }
+            });
           } else if (
             node.type === "VariableDeclaration" ||
             node.type === "ExpressionStatement"
@@ -194,6 +216,7 @@ export async function getDependencyGraph(): Promise<EnhancedGraphData> {
               graph.links.push({
                 source: relativePath,
                 target: relativeResolvedPath,
+                specifiers: specifiers.length > 0 ? specifiers : undefined,
               });
             }
           }
@@ -270,4 +293,3 @@ function resolveImportPath(
     );
   });
 }
-

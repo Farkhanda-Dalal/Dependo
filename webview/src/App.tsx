@@ -6,6 +6,7 @@ import "./App.css";
 import LoadingState from "./components/LoadingState";
 import EmptyProject from "./components/EmptyProject";
 import Sidebar from "./components/Sidebar";
+import CycleDetails from "./components/CycleDetails";
 
 // Create a specific type for the VS Code API
 interface VscodeApi {
@@ -415,6 +416,7 @@ function App() {
       <Sidebar folders={folders} onFolderClick={handleFolderClick} />
 
       <div className="main-content">
+        <CycleDetails cycles={allGraphData.cycles} show={showCycles} />
         <div className="graph-panel">
           <div className="graph-header">
             <h1 className="graph-title">Dependency Graph</h1>

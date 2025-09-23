@@ -1,0 +1,77 @@
+/* CycleDetails.css */
+.cycle-details-panel {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 400px;
+  max-height: 300px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 1010;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--neutral-200);
+}
+
+.cycle-details-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--neutral-800);
+  padding: 16px;
+  margin: 0;
+  border-bottom: 1px solid var(--neutral-200);
+  flex-shrink: 0;
+}
+
+.cycle-details-list {
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.cycle-item {
+  margin-bottom: 16px;
+  background: var(--neutral-50);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  border: 1px solid var(--neutral-200);
+}
+
+.cycle-item:last-child {
+  margin-bottom: 0;
+}
+
+.cycle-item-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--neutral-700);
+  margin-bottom: 8px;
+}
+
+.cycle-path {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 13px;
+  color: var(--neutral-600);
+}
+
+.cycle-path li {
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+
+.cycle-node {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: "Fira Code", monospace;
+}
+
+.specifiers {
+  font-weight: 600;
+  color: var(--primary-blue-dark);
+}

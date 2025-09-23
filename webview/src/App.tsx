@@ -1,12 +1,27 @@
-// App.tsx
 import { useEffect, useState, useRef } from "react";
-import { Network, type Data, type Options } from "vis-network/standalone";
-import type { EnhancedGraphData } from "../../src/parser";
+import { Network } from "vis-network/standalone";
+import type { EnhancedGraphData } from '../../src/types/enhancedgraphdata.interface';
 import "./App.css";
+
+// Import the new components
+import GraphHeader from "./components/GraphHeader";
+import GraphControls from "./components/GraphControls";
+import GraphStats from "./components/GraphStats";
+
+// Import the existing components
 import LoadingState from "./components/LoadingState";
 import EmptyProject from "./components/EmptyProject";
 import Sidebar from "./components/Sidebar";
 import CycleDetails from "./components/CycleDetails";
+
+// Import the handler functions from the new utils file
+import { handleSearch } from "./utils/handleSearch";
+import { handleDetectCycles } from "./utils/handleDetectCycles";
+import { handleFolderClick } from "./utils/handleFolderClick";
+
+// Import the new configuration functions
+import { createVisOptions } from "./config/createVisOptions";
+import { createVisData } from "./config/createVisData";
 
 // Create a specific type for the VS Code API
 interface VscodeApi {
@@ -20,6 +35,7 @@ declare global {
 }
 
 function App() {
+  //useState
   const [allGraphData, setAllGraphData] = useState<EnhancedGraphData>({
     nodes: [],
     links: [],
@@ -55,321 +71,12 @@ function App() {
       });
   }, []);
 
-  const fitNetwork = () => {
-    if (networkRef.current) {
-      networkRef.current.fit();
-    }
-  };
-
-  const handleDetectCycles = () => {
-    if (allGraphData.cycles.length === 0) {
-      alert("No circular dependencies found in your project. Great!");
-    } else {
-      setShowCycles(!showCycles);
-    }
-  };
-
-  const handleSearch = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      const query = event.currentTarget.value.toLowerCase();
-      if (query === "") {
-        setFilteredGraphData(allGraphData);
-      } else {
-        const matchingNodes = allGraphData.nodes.filter((node) =>
-          node.id.toLowerCase().includes(query)
-        );
-        const matchingNodeIds = new Set(matchingNodes.map((node) => node.id));
-
-        const filteredLinks = allGraphData.links.filter(
-          (link) =>
-            matchingNodeIds.has(link.source) || matchingNodeIds.has(link.target)
-        );
-
-        const allRelatedNodeIds = new Set<string>();
-        filteredLinks.forEach((link) => {
-          allRelatedNodeIds.add(link.source);
-          allRelatedNodeIds.add(link.target);
-        });
-
-        const filteredNodes = allGraphData.nodes.filter((node) =>
-          allRelatedNodeIds.has(node.id)
-        );
-
-        setFilteredGraphData({
-          ...allGraphData,
-          nodes: filteredNodes,
-          links: filteredLinks,
-        });
-      }
-    }
-  };
-
-  const handleFolderClick = (folderPath: string) => {
-    console.log("Folder Clicked:", folderPath);
-    console.log(
-      "All graph nodes:",
-      allGraphData.nodes.map((n) => n.id)
-    );
-
-    // Normalize folder path - ensure it uses forward slashes
-    const normalizedFolderPath = folderPath.replace(/\\/g, "/");
-    const query =
-      normalizedFolderPath === "root" ? "" : `${normalizedFolderPath}/`;
-    console.log("Query string:", query);
-
-    if (query === "") {
-      setFilteredGraphData(allGraphData);
-    } else {
-      const matchingNodes = allGraphData.nodes.filter((node) => {
-        const nodeId = node.id.toLowerCase();
-        const queryLower = query.toLowerCase();
-        console.log(
-          `Checking if "${nodeId}" starts with "${queryLower}":`,
-          nodeId.startsWith(queryLower)
-        );
-        return nodeId.startsWith(queryLower);
-      });
-      console.log("Nodes within folder:", matchingNodes);
-
-      if (matchingNodes.length === 0) {
-        console.log(
-          "No direct matches found, checking for any nodes containing the folder path..."
-        );
-        // Try a more flexible search - find nodes that contain the folder path anywhere
-        const flexibleMatchingNodes = allGraphData.nodes.filter((node) => {
-          const nodeId = node.id.toLowerCase();
-          const folderPathLower = normalizedFolderPath.toLowerCase();
-          return nodeId.includes(folderPathLower);
-        });
-
-        if (flexibleMatchingNodes.length > 0) {
-          console.log(
-            "Found nodes with flexible matching:",
-            flexibleMatchingNodes
-          );
-          const matchingNodeIds = new Set(
-            flexibleMatchingNodes.map((node) => node.id)
-          );
-          const filteredLinks = allGraphData.links.filter(
-            (link) =>
-              matchingNodeIds.has(link.source) ||
-              matchingNodeIds.has(link.target)
-          );
-
-          const allRelatedNodeIds = new Set<string>();
-          filteredLinks.forEach((link) => {
-            allRelatedNodeIds.add(link.source);
-            allRelatedNodeIds.add(link.target);
-          });
-
-          const filteredNodes = allGraphData.nodes.filter((node) =>
-            allRelatedNodeIds.has(node.id)
-          );
-
-          setFilteredGraphData({
-            ...allGraphData,
-            nodes: filteredNodes,
-            links: filteredLinks,
-          });
-        } else {
-          console.log("No nodes found even with flexible matching");
-          setFilteredGraphData({ nodes: [], links: [], cycles: [] });
-        }
-        return;
-      }
-
-      const matchingNodeIds = new Set(matchingNodes.map((node) => node.id));
-      const filteredLinks = allGraphData.links.filter(
-        (link) =>
-          matchingNodeIds.has(link.source) || matchingNodeIds.has(link.target)
-      );
-
-      const allRelatedNodeIds = new Set<string>();
-      filteredLinks.forEach((link) => {
-        allRelatedNodeIds.add(link.source);
-        allRelatedNodeIds.add(link.target);
-      });
-
-      const filteredNodes = allGraphData.nodes.filter((node) =>
-        allRelatedNodeIds.has(node.id)
-      );
-
-      setFilteredGraphData({
-        ...allGraphData,
-        nodes: filteredNodes,
-        links: filteredLinks,
-      });
-    }
-  };
-
   useEffect(() => {
     if (containerRef.current && filteredGraphData.nodes.length > 0) {
-      const cycleNodeIds = new Set(
-        showCycles ? allGraphData.cycles.flatMap((c) => c.nodes) : []
-      );
-      const cycleLinkIds = new Set(
-        showCycles
-          ? allGraphData.cycles.flatMap((c) =>
-              c.links.map((l) => `${l.source}->${l.target}`)
-            )
-          : []
-      );
-
-      // Collect all unique group names to configure their physics
-      const uniqueGroups = new Set<string>();
-      const nodesWithGroups = filteredGraphData.nodes.map((node) => {
-        const relativePath = node.id;
-        const pathParts = relativePath.split("/");
-        const group = pathParts.length > 1 ? pathParts[0] : "root";
-        uniqueGroups.add(group); // Add group to the set
-
-        const isCycleNode = cycleNodeIds.has(node.id);
-
-        return {
-          id: node.id,
-          label:
-            node.id.length > 20 ? node.id.substring(0, 20) + "..." : node.id,
-          title: node.id,
-          group: group,
-          color: isCycleNode
-            ? {
-                background: "#fee2e2",
-                border: "#ef4444",
-                highlight: { background: "#fecaca", border: "#dc2626" },
-                hover: { background: "#fee2e2", border: "#ef4444" },
-              }
-            : undefined,
-        };
-      });
-
-      // Dynamically create group configurations for physics
-      const groupPhysicsConfig: { [key: string]: { physics: boolean } } = {};
-      uniqueGroups.forEach((g: string) => {
-        groupPhysicsConfig[g] = { physics: true }; // Enable physics per group
-      });
-
-      const visData: Data = {
-        nodes: nodesWithGroups,
-        edges: filteredGraphData.links.map((link) => {
-          const isCycleLink = cycleLinkIds.has(
-            `${link.source}->${link.target}`
-          );
-          return {
-            from: link.source,
-            to: link.target,
-            color: isCycleLink
-              ? {
-                  color: "#f87171",
-                  highlight: "#ef4444",
-                  hover: "#ef4444",
-                }
-              : undefined,
-            width: isCycleLink ? 3 : 2,
-          };
-        }),
-      };
-
-      const options: Options = {
-        layout: {
-          improvedLayout: true,
-        },
-        physics: {
-          enabled: true,
-          barnesHut: {
-            gravitationalConstant: -30000, // Increased repulsion
-            centralGravity: 0.1, // Reduced pull to center
-            springLength: 100,
-            springConstant: 0.05,
-            damping: 0.15,
-            avoidOverlap: 1, // Maximize avoidance of overlap within clusters
-          },
-          minVelocity: 0.75,
-          solver: "barnesHut",
-        },
-        nodes: {
-          shape: "box",
-          font: {
-            color: "#374151",
-            face: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            size: 14,
-          },
-          color: {
-            background: "#f8fafc",
-            border: "#0066cc",
-            highlight: {
-              background: "#dbeafe",
-              border: "#2563eb",
-            },
-            hover: {
-              background: "#eff6ff",
-              border: "#3b82f6",
-            },
-          },
-          margin: { top: 12, right: 16, bottom: 12, left: 16 },
-          borderWidth: 2,
-          borderWidthSelected: 3,
-          shadow: {
-            enabled: true,
-            color: "rgba(37, 99, 235, 0.15)",
-            size: 8,
-            x: 0,
-            y: 2,
-          },
-        },
-        edges: {
-          color: {
-            color: "#60a5fa",
-            highlight: "#2563eb",
-            hover: "#3b82f6",
-            inherit: false,
-          },
-          width: 2,
-          widthConstraint: {
-            maximum: 4,
-          },
-          font: {
-            align: "middle",
-            size: 12,
-            color: "#1e40af",
-            background: "#ffffff",
-            strokeWidth: 3,
-            strokeColor: "#ffffff",
-          },
-          arrows: {
-            to: {
-              enabled: true,
-              scaleFactor: 1.2,
-              type: "arrow",
-            },
-          },
-          smooth: {
-            enabled: true,
-            type: "dynamic",
-            roundness: 0.5,
-          },
-          shadow: {
-            enabled: true,
-            color: "rgba(59, 130, 246, 0.1)",
-            size: 4,
-            x: 0,
-            y: 1,
-          },
-        },
-        interaction: {
-          hover: true,
-          tooltipDelay: 200,
-          hideEdgesOnDrag: false,
-          hideNodesOnDrag: false,
-          dragView: true,
-          zoomView: true,
-        },
-        // Dynamically assign physics settings to groups
-        groups: groupPhysicsConfig,
-        configure: {
-          enabled: false,
-        },
-      };
-
+      // Use the new functions to create the data and options
+      const visData = createVisData(filteredGraphData, allGraphData, showCycles);
+      const options = createVisOptions(filteredGraphData);
+      
       const network = new Network(containerRef.current, visData, options);
       networkRef.current = network;
 
@@ -380,14 +87,12 @@ function App() {
       network.fit();
 
       const canvas = containerRef.current;
-
       network.on("hoverNode", () => {
         if (canvas) canvas.style.cursor = "pointer";
       });
       network.on("blurNode", () => {
         if (canvas) canvas.style.cursor = "grab";
       });
-
       network.on("dragStart", () => {
         if (canvas) canvas.style.cursor = "grabbing";
       });
@@ -399,74 +104,44 @@ function App() {
     }
   }, [filteredGraphData, showCycles, allGraphData.cycles]);
 
+    const fitNetwork = () => {
+    if (networkRef.current) {
+      networkRef.current.fit();
+    }
+  };
+
+
   const nodeCount = filteredGraphData.nodes.length;
   const edgeCount = filteredGraphData.links.length;
 
   if (isLoading) {
-    return <LoadingState></LoadingState>;
+    return <LoadingState />;
   }
 
   if (nodeCount === 0 && edgeCount === 0) {
-    return <EmptyProject></EmptyProject>;
+    return <EmptyProject />;
   }
 
   return (
     <div className="app-container">
-      {/* The Sidebar component will go here */}
-      <Sidebar folders={folders} onFolderClick={handleFolderClick} />
-
+      <Sidebar folders={folders} onFolderClick={(folderPath) => handleFolderClick(folderPath, allGraphData, setFilteredGraphData)} />
       <div className="main-content">
         <CycleDetails cycles={allGraphData.cycles} show={showCycles} />
         <div className="graph-panel">
-          <div className="graph-header">
-            <h1 className="graph-title">Dependency Graph</h1>
-            <p className="graph-subtitle">
-              Visual representation of your project's dependencies
-            </p>
-            <input
-              type="text"
-              placeholder="Search by file name..."
-              onKeyDown={handleSearch}
-              className="search-input"
-            />
-          </div>
-
-          <div className="graph-controls">
-            <button className="control-button" onClick={fitNetwork}>
-              🎯 Fit View
-            </button>
-            <button
-              className={`control-button ${showCycles ? "active" : ""}`}
-              onClick={handleDetectCycles}
-            >
-              🔍 {showCycles ? "Hide" : "Detect"} Cycles
-            </button>
-          </div>
+          <GraphHeader
+            handleSearch={(e) => handleSearch(e, allGraphData, setFilteredGraphData)}
+          />
+          <GraphControls
+            fitNetwork={fitNetwork}
+            handleDetectCycles={() => handleDetectCycles(allGraphData, showCycles, setShowCycles)}
+            showCycles={showCycles}
+          />
         </div>
-
-        <div className="graph-stats">
-          <div className="stat-item">
-            <div className="stat-value">{nodeCount}</div>
-            <div className="stat-label">Files</div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-value">{edgeCount}</div>
-            <div className="stat-label">Dependencies</div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-value">{allGraphData.cycles.length}</div>
-            <div className="stat-label">Cycles</div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-value">
-              {edgeCount > 0
-                ? Math.round((edgeCount / nodeCount) * 10) / 10
-                : 0}
-            </div>
-            <div className="stat-label">Avg. Deps</div>
-          </div>
-        </div>
-
+        <GraphStats
+          nodeCount={nodeCount}
+          edgeCount={edgeCount}
+          cycleCount={allGraphData.cycles.length}
+        />
         <div ref={containerRef} className="graph-container"></div>
       </div>
     </div>

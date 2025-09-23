@@ -1,7 +1,5 @@
 // extension.ts
 import * as vscode from 'vscode';
-import * as cp from 'child_process';
-import * as path from 'path';
 
 // This require statement bundles the server code into the extension
 require('./server'); 

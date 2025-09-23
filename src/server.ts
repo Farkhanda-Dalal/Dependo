@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
-import { getDependencyGraph, getDirectoryStructure } from './parser';
+import { getDependencyGraph } from './utils/getDependencyGraph';
+import { getDirectoryStructure } from './utils/getDirectoryStructure';
 import * as path from 'path';
 
 const app = express();

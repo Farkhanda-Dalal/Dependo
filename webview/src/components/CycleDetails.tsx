@@ -1,5 +1,5 @@
 import React from "react";
-import type { Cycle } from "../../../src/parser";
+import type { Cycle } from "../../../src/types/cycle.interface";
 import "./CycleDetails.css";
 
 interface CycleDetailsProps {

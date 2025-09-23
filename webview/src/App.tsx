@@ -1,7 +1,7 @@
 // App.tsx
 import { useEffect, useState, useRef } from "react";
 import { Network, type Data, type Options } from "vis-network/standalone";
-import type { GraphData } from "../../src/parser";
+import type { EnhancedGraphData } from "../../src/parser";
 import "./App.css";
 import LoadingState from "./components/LoadingState";
 import EmptyProject from "./components/EmptyProject";
@@ -19,16 +19,21 @@ declare global {
 }
 
 function App() {
-  const [allGraphData, setAllGraphData] = useState<GraphData>({
+  const [allGraphData, setAllGraphData] = useState<EnhancedGraphData>({
     nodes: [],
     links: [],
+    cycles: [],
   });
-  const [filteredGraphData, setFilteredGraphData] = useState<GraphData>({
-    nodes: [],
-    links: [],
-  });
+  const [filteredGraphData, setFilteredGraphData] = useState<EnhancedGraphData>(
+    {
+      nodes: [],
+      links: [],
+      cycles: [],
+    }
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [folders, setFolders] = useState({});
+  const [showCycles, setShowCycles] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const networkRef = useRef<Network | null>(null);
 
@@ -52,6 +57,14 @@ function App() {
   const fitNetwork = () => {
     if (networkRef.current) {
       networkRef.current.fit();
+    }
+  };
+
+  const handleDetectCycles = () => {
+    if (allGraphData.cycles.length === 0) {
+      alert("No circular dependencies found in your project. Great!");
+    } else {
+      setShowCycles(!showCycles);
     }
   };
 
@@ -81,7 +94,11 @@ function App() {
           allRelatedNodeIds.has(node.id)
         );
 
-        setFilteredGraphData({ nodes: filteredNodes, links: filteredLinks });
+        setFilteredGraphData({
+          ...allGraphData,
+          nodes: filteredNodes,
+          links: filteredLinks,
+        });
       }
     }
   };
@@ -148,10 +165,14 @@ function App() {
             allRelatedNodeIds.has(node.id)
           );
 
-          setFilteredGraphData({ nodes: filteredNodes, links: filteredLinks });
+          setFilteredGraphData({
+            ...allGraphData,
+            nodes: filteredNodes,
+            links: filteredLinks,
+          });
         } else {
           console.log("No nodes found even with flexible matching");
-          setFilteredGraphData({ nodes: [], links: [] });
+          setFilteredGraphData({ nodes: [], links: [], cycles: [] });
         }
         return;
       }
@@ -172,12 +193,27 @@ function App() {
         allRelatedNodeIds.has(node.id)
       );
 
-      setFilteredGraphData({ nodes: filteredNodes, links: filteredLinks });
+      setFilteredGraphData({
+        ...allGraphData,
+        nodes: filteredNodes,
+        links: filteredLinks,
+      });
     }
   };
 
   useEffect(() => {
     if (containerRef.current && filteredGraphData.nodes.length > 0) {
+      const cycleNodeIds = new Set(
+        showCycles ? allGraphData.cycles.flatMap((c) => c.nodes) : []
+      );
+      const cycleLinkIds = new Set(
+        showCycles
+          ? allGraphData.cycles.flatMap((c) =>
+              c.links.map((l) => `${l.source}->${l.target}`)
+            )
+          : []
+      );
+
       // Collect all unique group names to configure their physics
       const uniqueGroups = new Set<string>();
       const nodesWithGroups = filteredGraphData.nodes.map((node) => {
@@ -186,28 +222,50 @@ function App() {
         const group = pathParts.length > 1 ? pathParts[0] : "root";
         uniqueGroups.add(group); // Add group to the set
 
+        const isCycleNode = cycleNodeIds.has(node.id);
+
         return {
           id: node.id,
           label:
             node.id.length > 20 ? node.id.substring(0, 20) + "..." : node.id,
           title: node.id,
           group: group,
+          color: isCycleNode
+            ? {
+                background: "#fee2e2",
+                border: "#ef4444",
+                highlight: { background: "#fecaca", border: "#dc2626" },
+                hover: { background: "#fee2e2", border: "#ef4444" },
+              }
+            : undefined,
         };
       });
 
       // Dynamically create group configurations for physics
       const groupPhysicsConfig: { [key: string]: { physics: boolean } } = {};
-      uniqueGroups.forEach(g => {
+      uniqueGroups.forEach((g: string) => {
         groupPhysicsConfig[g] = { physics: true }; // Enable physics per group
       });
 
-
       const visData: Data = {
         nodes: nodesWithGroups,
-        edges: filteredGraphData.links.map((link) => ({
-          from: link.source,
-          to: link.target,
-        })),
+        edges: filteredGraphData.links.map((link) => {
+          const isCycleLink = cycleLinkIds.has(
+            `${link.source}->${link.target}`
+          );
+          return {
+            from: link.source,
+            to: link.target,
+            color: isCycleLink
+              ? {
+                  color: "#f87171",
+                  highlight: "#ef4444",
+                  hover: "#ef4444",
+                }
+              : undefined,
+            width: isCycleLink ? 3 : 2,
+          };
+        }),
       };
 
       const options: Options = {
@@ -305,7 +363,7 @@ function App() {
           zoomView: true,
         },
         // Dynamically assign physics settings to groups
-        groups: groupPhysicsConfig, 
+        groups: groupPhysicsConfig,
         configure: {
           enabled: false,
         },
@@ -321,7 +379,7 @@ function App() {
       network.fit();
 
       const canvas = containerRef.current;
-      
+
       network.on("hoverNode", () => {
         if (canvas) canvas.style.cursor = "pointer";
       });
@@ -335,10 +393,10 @@ function App() {
       network.on("dragEnd", () => {
         if (canvas) canvas.style.cursor = "grab";
       });
-      
+
       if (canvas) canvas.style.cursor = "grab";
     }
-  }, [filteredGraphData]);
+  }, [filteredGraphData, showCycles, allGraphData.cycles]);
 
   const nodeCount = filteredGraphData.nodes.length;
   const edgeCount = filteredGraphData.links.length;
@@ -371,9 +429,17 @@ function App() {
             />
           </div>
 
-          <button className="control-button" onClick={fitNetwork}>
-            🎯 Fit View
-          </button>
+          <div className="graph-controls">
+            <button className="control-button" onClick={fitNetwork}>
+              🎯 Fit View
+            </button>
+            <button
+              className={`control-button ${showCycles ? "active" : ""}`}
+              onClick={handleDetectCycles}
+            >
+              🔍 {showCycles ? "Hide" : "Detect"} Cycles
+            </button>
+          </div>
         </div>
 
         <div className="graph-stats">
@@ -384,6 +450,10 @@ function App() {
           <div className="stat-item">
             <div className="stat-value">{edgeCount}</div>
             <div className="stat-label">Dependencies</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value">{allGraphData.cycles.length}</div>
+            <div className="stat-label">Cycles</div>
           </div>
           <div className="stat-item">
             <div className="stat-value">

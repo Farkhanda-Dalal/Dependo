@@ -4,115 +4,91 @@ import * as fs from "fs";
 import { parse } from "@babel/parser";
 import resolve from "resolve";
 
+// Your existing interface. We will not touch this.
 export interface GraphData {
   nodes: { id: string }[];
   links: { source: string; target: string }[];
 }
 
-// export async function getDependencyGraph(): Promise<GraphData> {
-//   const graph: GraphData = {
-//     nodes: [],
-//     links: [],
-//   };
-//   const nodeSet = new Set<string>();
+// Defines the structure for a single circular dependency found.
+export interface Cycle {
+  nodes: string[];
+  links: { source: string; target: string }[];
+}
 
-//   const workspaceRoot = vscode.workspace.workspaceFolders
-//     ? vscode.workspace.workspaceFolders[0].uri.fsPath
-//     : "";
+// This new interface extends your original GraphData and adds the cycles array.
+export interface EnhancedGraphData extends GraphData {
+  cycles: Cycle[];
+}
 
-//   console.log("Starting to search for files...");
-//   const files = await vscode.workspace.findFiles(
-//     "{**/*.js,**/*.jsx,**/*.ts,**/*.tsx}",
-//     "**/node_modules/**"
-//   );
-//   console.log(`Found ${files.length} files.`);
+// --- NEW FUNCTION: detectCycles STARTS HERE ---
 
-//   try {
-//     for (const file of files) {
-//       const filePath = file.fsPath;
-//       const relativePath = path
-//         .relative(workspaceRoot, filePath)
-//         .replace(/\\/g, "/"); // Normalize path separators
+/**
+ * Detects cycles in a directed graph using Depth-First Search.
+ * @param nodes The nodes of the graph.
+ * @param links The directed edges of the graph.
+ * @returns An array of cycles found in the graph.
+ */
+function detectCycles(nodes: { id: string }[], links: { source: string; target: string }[]): Cycle[] {
+  const adjList = new Map<string, string[]>();
+  const allCycles: Cycle[] = [];
+  const foundCycles = new Set<string>(); // Stores a unique key for each found cycle to prevent duplicates.
 
-//       if (!nodeSet.has(relativePath)) {
-//         graph.nodes.push({ id: relativePath });
-//         nodeSet.add(relativePath);
-//       }
+  // 1. Build an adjacency list for efficient traversal.
+  links.forEach(link => {
+    if (!adjList.has(link.source)) {
+      adjList.set(link.source, []);
+    }
+    adjList.get(link.source)!.push(link.target);
+  });
 
-//       const fileContent = fs.readFileSync(filePath, "utf-8");
+  // 2. Iterate through each node and perform DFS to find cycles.
+  for (const node of nodes) {
+    const visiting = new Set<string>(); // Nodes currently in the recursion stack for the current DFS path.
+    const path: string[] = []; // The current path of nodes being explored.
+    dfs(node.id, visiting, path);
+  }
 
-//       try {
-//         const ast = parse(fileContent, {
-//           sourceType: "unambiguous",
-//           plugins: ["jsx", "typescript"],
-//         });
+  function dfs(nodeId: string, visiting: Set<string>, path: string[]) {
+    visiting.add(nodeId);
+    path.push(nodeId);
 
-//         for (const node of ast.program.body) {
-//           let importPath: string | null = null;
+    const neighbors = adjList.get(nodeId) || [];
+    for (const neighbor of neighbors) {
+      // If we find a neighbor that is already in the 'visiting' set, we have found a cycle.
+      if (visiting.has(neighbor)) {
+        const cycleStartIndex = path.indexOf(neighbor);
+        const cycleNodes = path.slice(cycleStartIndex);
 
-//           if (node.type === "ImportDeclaration") {
-//             importPath = node.source.value;
-//           } else if (
-//             node.type === "VariableDeclaration" ||
-//             node.type === "ExpressionStatement"
-//           ) {
-//             let expression =
-//               node.type === "VariableDeclaration"
-//                 ? node.declarations[0]?.init
-//                 : node.expression;
+        // To avoid duplicates, create a sorted, canonical representation of the cycle.
+        const canonicalCycleKey = cycleNodes.slice().sort().join(',');
+        if (!foundCycles.has(canonicalCycleKey)) {
+          const cycleLinks = [];
+          for (let i = 0; i < cycleNodes.length; i++) {
+            cycleLinks.push({
+              source: cycleNodes[i],
+              target: cycleNodes[(i + 1) % cycleNodes.length] // Connect back to the start
+            });
+          }
+          allCycles.push({ nodes: cycleNodes, links: cycleLinks });
+          foundCycles.add(canonicalCycleKey);
+        }
+        continue; // Continue searching for other cycles from this path.
+      }
+      dfs(neighbor, visiting, path);
+    }
 
-//             if (
-//               expression?.type === "CallExpression" &&
-//               expression.callee.type === "Identifier" &&
-//               expression.callee.name === "require" &&
-//               expression.arguments.length > 0 &&
-//               expression.arguments[0].type === "StringLiteral"
-//             ) {
-//               importPath = expression.arguments[0].value;
-//             }
-//           }
+    // Backtrack: Once we have explored all neighbors, remove the current node from the visiting set and path.
+    visiting.delete(nodeId);
+    path.pop();
+  }
 
-//           if (importPath) {
-//             const resolvedPath = await resolveImportPath(filePath, importPath);
+  return allCycles;
+}
 
-//             if (resolvedPath) {
-//               // Add this check to exclude node_modules
-//               if (resolvedPath.includes("node_modules")) {
-//                 continue; // Skip this dependency
-//               }
+// --- NEW FUNCTION: detectCycles ENDS HERE ---
 
-//               const relativeResolvedPath = path
-//                 .relative(workspaceRoot, resolvedPath)
-//                 .replace(/\\/g, "/");
 
-//               if (!nodeSet.has(relativeResolvedPath)) {
-//                 graph.nodes.push({ id: relativeResolvedPath });
-//                 nodeSet.add(relativeResolvedPath);
-//               }
-
-//               graph.links.push({
-//                 source: relativePath,
-//                 target: relativeResolvedPath,
-//               });
-//             }
-//           }
-//         }
-//       } catch (e) {
-//         console.error(`Error parsing file: ${relativePath}`, e);
-//       }
-//     }
-//     console.log(
-//       "Graph generation complete. Result:",
-//       JSON.stringify(graph, null, 2)
-//     );
-//   } catch (e) {
-//     console.error("An unexpected error occurred during graph generation:", e);
-//   }
-
-//   return graph;
-// }
-
-// Add these patterns to exclude a wide range of non-source files
 const excludedPatterns = [
   /\.config\.js$/,
   /\.json$/,
@@ -130,11 +106,11 @@ const excludedPatterns = [
   /jest\.config\.js$/,
   /prettierrc$/,
   /eslint$/,
-  /^vscode$/, // Matches 'vscode' as a dependency
-  /^microsoft$/, // Matches 'microsoft' as a dependency
+  /^vscode$/,
+  /^microsoft$/,
 ];
 
-export async function getDependencyGraph(): Promise<GraphData> {
+export async function getDependencyGraph(): Promise<EnhancedGraphData> {
   const graph: GraphData = {
     nodes: [],
     links: [],
@@ -152,7 +128,6 @@ export async function getDependencyGraph(): Promise<GraphData> {
   );
   console.log(`Found ${files.length} files.`);
 
-  // Step 1: Filter out unwanted files based on patterns
   const filteredFiles = files.filter((file) => {
     const relativePath = path.relative(workspaceRoot, file.fsPath);
     return !excludedPatterns.some((pattern) => pattern.test(relativePath));
@@ -161,7 +136,6 @@ export async function getDependencyGraph(): Promise<GraphData> {
   console.log(`Filtered down to ${filteredFiles.length} files.`);
 
   try {
-    // Step 2: Iterate over the filtered list instead of the original one
     for (const file of filteredFiles) {
       const filePath = file.fsPath;
       const relativePath = path
@@ -183,7 +157,6 @@ export async function getDependencyGraph(): Promise<GraphData> {
 
         for (const node of ast.program.body) {
           let importPath: string | null = null;
-
           if (node.type === "ImportDeclaration") {
             importPath = node.source.value;
           } else if (
@@ -194,7 +167,6 @@ export async function getDependencyGraph(): Promise<GraphData> {
               node.type === "VariableDeclaration"
                 ? node.declarations[0]?.init
                 : node.expression;
-
             if (
               expression?.type === "CallExpression" &&
               expression.callee.type === "Identifier" &&
@@ -208,16 +180,13 @@ export async function getDependencyGraph(): Promise<GraphData> {
 
           if (importPath) {
             const resolvedPath = await resolveImportPath(filePath, importPath);
-
             if (resolvedPath) {
               if (resolvedPath.includes("node_modules")) {
                 continue;
               }
-
               const relativeResolvedPath = path
                 .relative(workspaceRoot, resolvedPath)
                 .replace(/\\/g, "/");
-
               if (!nodeSet.has(relativeResolvedPath)) {
                 graph.nodes.push({ id: relativeResolvedPath });
                 nodeSet.add(relativeResolvedPath);
@@ -241,7 +210,13 @@ export async function getDependencyGraph(): Promise<GraphData> {
     console.error("An unexpected error occurred during graph generation:", e);
   }
 
-  return graph;
+  // --- MODIFIED ---
+  // After building the graph, we now call our new function to find cycles.
+  const cycles = detectCycles(graph.nodes, graph.links);
+  console.log(`Cycle detection complete. Found ${cycles.length} cycles.`);
+
+  // We return the graph data, now including the cycles we just found.
+  return { ...graph, cycles };
 }
 
 export async function getDirectoryStructure(): Promise<any> {
@@ -251,12 +226,9 @@ export async function getDirectoryStructure(): Promise<any> {
   if (!workspaceRoot) {
     return {};
   }
-
   const structure = {};
-
   function traverseDir(currentPath: string, parentObj: any) {
     const items = fs.readdirSync(currentPath, { withFileTypes: true });
-
     items.forEach((item) => {
       if (item.isDirectory() && item.name !== "node_modules") {
         const folderName = item.name;
@@ -265,7 +237,6 @@ export async function getDirectoryStructure(): Promise<any> {
       }
     });
   }
-
   try {
     traverseDir(workspaceRoot, structure);
     return structure;
@@ -284,7 +255,7 @@ function resolveImportPath(
       importPath,
       {
         basedir: path.dirname(currentFilePath),
-        extensions: [".js", ".jsx", ".ts", ".tsx"],
+        extensions: [".js", ".jsx", ".ts", ".tsx", ".ejs", ".mjs", ".html"],
       },
       (error: Error | null, resolvedPath: string | undefined) => {
         if (error || !resolvedPath) {
@@ -299,3 +270,4 @@ function resolveImportPath(
     );
   });
 }
+

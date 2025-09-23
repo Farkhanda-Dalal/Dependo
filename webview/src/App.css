@@ -91,14 +91,9 @@ body {
 }
 
 /* Controls and header now share same floating style */
-.graph-controls,
-.graph-header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  padding: 16px;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-md);
-  border: var(--border-width) solid var(--neutral-200);
+.graph-controls {
+  display: flex;
+  gap: 12px;
 }
 
 /* keep header text styles */
@@ -108,41 +103,6 @@ body {
   color: var(--neutral-800);
   margin: 0 0 8px 0;
 }
-
-/* .graph-header {
-  position: relative; 
-  margin-top: 0;      
-  margin-bottom: 1rem;
-  padding: 0;          
-  z-index: auto;     
-  top: 6rem;  
-  left: 1rem;
-  width: 300px; 
-}
-
-.graph-controls {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  z-index: 1000;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  padding: 16px;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-md);
-  border: var(--border-width) solid var(--neutral-200);
-  display: flex;
-  gap: 8px;
-  flex-direction: column;
-}
-
-.graph-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--neutral-800);
-  margin: 0 0 8px 0;
-  letter-spacing: -0.02em;
-} */
 
 .graph-subtitle {
   font-size: 14px;

@@ -41,6 +41,8 @@ export async function getDependencyGraph(): Promise<GraphData> {
 
       const fileContent = fs.readFileSync(filePath, "utf-8");
 
+      // ... (rest of the function)
+
       try {
         const ast = parse(fileContent, {
           sourceType: "module",
@@ -48,14 +50,41 @@ export async function getDependencyGraph(): Promise<GraphData> {
         });
 
         for (const node of ast.program.body) {
+          let importPath: string | null = null;
+
+          // Check for ES6 Import statements
           if (node.type === "ImportDeclaration") {
-            const importPath = node.source.value;
+            importPath = node.source.value;
+          }
+          // Check for CommonJS Require statements
+          else if (
+            node.type === "VariableDeclaration" ||
+            node.type === "ExpressionStatement"
+          ) {
+            let expression =
+              node.type === "VariableDeclaration"
+                ? node.declarations[0]?.init
+                : node.expression;
+
+            if (
+              expression?.type === "CallExpression" &&
+              expression.callee.type === "Identifier" &&
+              expression.callee.name === "require" &&
+              expression.arguments.length > 0 &&
+              expression.arguments[0].type === "StringLiteral"
+            ) {
+              importPath = expression.arguments[0].value;
+            }
+          }
+
+          // Process the found import/require path
+          if (importPath) {
             const resolvedPath = await resolveImportPath(filePath, importPath);
 
             if (resolvedPath) {
               const relativeResolvedPath = path
                 .relative(workspaceRoot, resolvedPath)
-                .replace(/\\/g, "/"); // Normalize path separators
+                .replace(/\\/g, "/");
               if (!nodeSet.has(relativeResolvedPath)) {
                 graph.nodes.push({ id: relativeResolvedPath });
                 nodeSet.add(relativeResolvedPath);
@@ -70,6 +99,8 @@ export async function getDependencyGraph(): Promise<GraphData> {
       } catch (e) {
         console.error(`Error parsing file: ${relativePath}`, e);
       }
+
+      // ... (rest of the function)
     }
     console.log(
       "Graph generation complete. Result:",
@@ -81,9 +112,6 @@ export async function getDependencyGraph(): Promise<GraphData> {
 
   return graph;
 }
-
-// parser.ts
-// ... (existing imports and interfaces) ...
 
 export async function getDirectoryStructure(): Promise<any> {
   const workspaceRoot = vscode.workspace.workspaceFolders

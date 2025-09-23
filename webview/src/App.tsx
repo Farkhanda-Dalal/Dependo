@@ -178,13 +178,32 @@ function App() {
 
   useEffect(() => {
     if (containerRef.current && filteredGraphData.nodes.length > 0) {
-      const visData: Data = {
-        nodes: filteredGraphData.nodes.map((node) => ({
+      // Collect all unique group names to configure their physics
+      const uniqueGroups = new Set<string>();
+      const nodesWithGroups = filteredGraphData.nodes.map((node) => {
+        const relativePath = node.id;
+        const pathParts = relativePath.split("/");
+        const group = pathParts.length > 1 ? pathParts[0] : "root";
+        uniqueGroups.add(group); // Add group to the set
+
+        return {
           id: node.id,
           label:
             node.id.length > 20 ? node.id.substring(0, 20) + "..." : node.id,
           title: node.id,
-        })),
+          group: group,
+        };
+      });
+
+      // Dynamically create group configurations for physics
+      const groupPhysicsConfig: { [key: string]: { physics: boolean } } = {};
+      uniqueGroups.forEach(g => {
+        groupPhysicsConfig[g] = { physics: true }; // Enable physics per group
+      });
+
+
+      const visData: Data = {
+        nodes: nodesWithGroups,
         edges: filteredGraphData.links.map((link) => ({
           from: link.source,
           to: link.target,
@@ -198,12 +217,12 @@ function App() {
         physics: {
           enabled: true,
           barnesHut: {
-            gravitationalConstant: -8000,
-            centralGravity: 0.3,
-            springLength: 120,
-            springConstant: 0.04,
-            damping: 0.09,
-            avoidOverlap: 0.8,
+            gravitationalConstant: -30000, // Increased repulsion
+            centralGravity: 0.1, // Reduced pull to center
+            springLength: 100,
+            springConstant: 0.05,
+            damping: 0.15,
+            avoidOverlap: 1, // Maximize avoidance of overlap within clusters
           },
           minVelocity: 0.75,
           solver: "barnesHut",
@@ -285,6 +304,8 @@ function App() {
           dragView: true,
           zoomView: true,
         },
+        // Dynamically assign physics settings to groups
+        groups: groupPhysicsConfig, 
         configure: {
           enabled: false,
         },

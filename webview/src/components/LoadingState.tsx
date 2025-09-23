@@ -1,6 +1,5 @@
 const LoadingState = () => {
   return (
-    <div className="app-container">
         <div className="loading-container">
           <div className="loading-content">
             <div className="loading-spinner"></div>
@@ -8,7 +7,6 @@ const LoadingState = () => {
             <div className="loading-subtext">Analyzing project structure</div>
           </div>
         </div>
-      </div>
   )
 }
 

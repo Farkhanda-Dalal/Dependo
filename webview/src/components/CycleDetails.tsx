@@ -1,6 +1,6 @@
 import React from "react";
 import type { Cycle } from "../../../src/types/cycle.interface";
-import "./CycleDetails.css";
+import "../styles/CycleDetails.css"
 
 interface CycleDetailsProps {
   cycles: Cycle[];

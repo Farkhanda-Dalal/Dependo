@@ -1,0 +1,36 @@
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: var(--neutral-100);
+  border-bottom: 1px solid var(--neutral-200);
+  height: 65px; /* Give the toolbar a fixed height */
+  flex-shrink: 0; /* Prevent it from shrinking */
+}
+
+.project-name h1 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--neutral-800);
+  margin: 0;
+}
+
+.toolbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.search-input {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--neutral-300);
+  background-color: var(--neutral-100);
+  color: var(--neutral-800);
+  width: 250px;
+}
+
+.search-input::placeholder {
+  color: var(--neutral-500);
+}

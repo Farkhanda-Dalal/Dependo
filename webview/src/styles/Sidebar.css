@@ -1,0 +1,76 @@
+.sidebar {
+  width: 300px;
+  flex-shrink: 0; /* Prevent sidebar from shrinking */
+  background-color: var(--neutral-100);
+  padding: 1rem;
+  overflow-y: auto;
+  border-right: 1px solid var(--neutral-200);
+}
+
+.sidebar h2 {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.folder-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+.folder-item {
+  cursor: pointer;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s ease;
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+}
+
+.folder-item:hover {
+  background-color: var(--neutral-200);
+}
+
+/* Graph Area */
+.graph-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--neutral-50);
+}
+
+.sidebar-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 1rem;
+}
+
+.folder-name {
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #475569;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.folder-name:hover {
+  background-color: #e2e8f0;
+}
+
+.root-folder-item {
+  margin-bottom: 1rem;
+  font-weight: bold;
+}
+
+.root-folder-item .folder-name {
+  color: #1e40af;
+}
+
+.sub-folder-list {
+  margin-left: 1rem;
+  border-left: 1px solid #cbd5e1;
+  padding-left: 0.5rem;
+}

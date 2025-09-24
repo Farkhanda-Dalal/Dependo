@@ -2,13 +2,11 @@
 interface GraphStatsProps {
   nodeCount: number;
   edgeCount: number;
-  cycleCount: number;
 }
 
 const GraphStats: React.FC<GraphStatsProps> = ({
   nodeCount,
-  edgeCount,
-  cycleCount,
+  edgeCount
 }) => {
   return (
     <div className="graph-stats">
@@ -19,10 +17,6 @@ const GraphStats: React.FC<GraphStatsProps> = ({
       <div className="stat-item">
         <div className="stat-value">{edgeCount}</div>
         <div className="stat-label">Dependencies</div>
-      </div>
-      <div className="stat-item">
-        <div className="stat-value">{cycleCount}</div>
-        <div className="stat-label">Cycles</div>
       </div>
       <div className="stat-item">
         <div className="stat-value">

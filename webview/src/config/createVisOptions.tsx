@@ -26,8 +26,8 @@ export const createVisOptions = (filteredGraphData: EnhancedGraphData): Options 
     physics: {
       enabled: true,
       barnesHut: {
-        gravitationalConstant: -30000,
-        centralGravity: 0.1,
+        gravitationalConstant: -25000,
+        centralGravity: 0.2,
         springLength: 100,
         springConstant: 0.05,
         damping: 0.15,

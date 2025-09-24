@@ -35,6 +35,9 @@
 
 * {
   box-sizing: border-box;
+  /* Smooth transitions */
+  transition: background-color 0.2s ease, border-color 0.2s ease,
+    color 0.2s ease;
 }
 
 body {
@@ -49,54 +52,41 @@ body {
   color: var(--neutral-700);
 }
 
-/* .app-container {
-  width: 100vw;
-  height: 100vh;
-  background: linear-gradient(135deg, var(--neutral-50) 0%, var(--neutral-100) 100%);
-  position: relative;
-  overflow: hidden;
-} */
-
+/* Main Layout Containers */
 .app-container {
-  display: flex; /* This is the key change for a side-by-side layout */
+  display: flex;
+  flex-direction: column;
   height: 100vh;
+  width: 100vw;
+}
+
+.content-container {
+  display: flex;
+  flex-grow: 1;
+  overflow: hidden;
+  height: calc(100vh - 65px); /* Adjust height to account for the toolbar */
 }
 
 .main-content {
-  flex-grow: 1; /* This makes the main content take up the remaining space */
-  display: flex;
-  flex-direction: column;
+  flex-grow: 1;
+  position: relative; /* This is crucial for containing absolute children */
 }
 
-.graph-container {
-  width: 100%;
-  height: 100%;
-  background: var(--neutral-50);
-  position: relative;
-  border: var(--border-width) solid var(--neutral-200);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-lg);
-  margin: 0;
-}
-
-/* Header Overlay */
+/* Graph Overlays (Header, Controls, Stats) */
 .graph-panel {
   position: absolute;
   top: 20px;
   right: 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px; /* spacing between controls and header */
+  gap: 16px;
   z-index: 1000;
 }
 
-/* Controls and header now share same floating style */
-.graph-controls {
-  display: flex;
-  gap: 12px;
+.graph-header {
+  text-align: right;
 }
 
-/* keep header text styles */
 .graph-title {
   font-size: 18px;
   font-weight: 600;
@@ -111,6 +101,11 @@ body {
   font-weight: 400;
 }
 
+.graph-controls {
+  display: flex;
+  gap: 12px;
+}
+
 .control-button {
   background: var(--primary-blue);
   color: white;
@@ -120,7 +115,6 @@ body {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -134,8 +128,10 @@ body {
   box-shadow: var(--shadow-md);
 }
 
-.control-button:active {
+.control-button:active, .control-button.active {
   transform: translateY(0);
+  background-color: var(--primary-blue);
+  color: white;
 }
 
 .control-button.secondary {
@@ -149,43 +145,76 @@ body {
   border-color: var(--neutral-400);
 }
 
-/* Stats Panel */
 .graph-stats {
   position: absolute;
-  bottom: 20px;
-  left: 20px;
-  z-index: 1000;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  padding: 16px 20px;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-md);
-  border: var(--border-width) solid var(--neutral-200);
+  right: 0.25rem;
+  z-index: 100;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--neutral-100);
+  border: 1px solid var(--neutral-200);
+  border-top: none;
   display: flex;
-  gap: 24px;
-  align-items: center;
+  gap: 2rem;
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-item {
   display: flex;
-  flex-direction: column;
+  flex-direction: column; /* Stack label and value vertically */
   align-items: center;
-  gap: 4px;
+  gap: 4px; /* Add a small gap between label and value */
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--neutral-500); /* Softer gray for the label text */
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .stat-value {
   font-size: 20px;
   font-weight: 700;
-  color: var(--primary-blue);
+  color: var(--primary-blue); /* Prominent blue for the stat number */
   line-height: 1;
 }
 
-.stat-label {
-  font-size: 12px;
-  color: var(--neutral-500);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+/* Cycle Details Panel */
+.cycle-details {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background-color: var(--neutral-200);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  max-height: 50%;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.cycle-details h3 {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.cycle-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+.cycle-item {
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  background-color: var(--neutral-300);
+  border-radius: 0.25rem;
+}
+
+.cycle-path {
+  font-family: monospace;
 }
 
 /* Loading State */
@@ -199,6 +228,7 @@ body {
   position: fixed;
   top: 0;
   left: 0;
+  z-index: 9999;
 }
 
 .loading-content {
@@ -217,12 +247,8 @@ body {
 }
 
 @keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .loading-text {
@@ -275,66 +301,29 @@ body {
   margin: 0;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .graph-header,
-  .graph-controls,
-  .graph-stats {
-    position: relative;
-    margin: 12px;
-    width: calc(100% - 24px);
-  }
-
-  .graph-stats {
-    flex-direction: column;
-    gap: 16px;
-    margin-top: 0;
-  }
-
-  .graph-container {
-    border-radius: 0;
-    border: none;
-    height: calc(100vh - 200px);
-  }
-
-  .stat-item {
-    flex-direction: row;
-    gap: 8px;
-  }
-}
-
 /* VS Code Theme Integration */
-.vscode-light {
-  --primary-blue: #0066cc;
-  --neutral-50: #ffffff;
-  --neutral-100: #f8f9fa;
-}
-
 .vscode-dark {
   --primary-blue: #4d94ff;
   --neutral-50: #1e1e1e;
   --neutral-100: #252526;
-  --neutral-800: #ffffff;
-  --neutral-700: #e5e5e5;
-  --neutral-600: #cccccc;
+  --neutral-200: #3a3a3a;
+  --neutral-300: #4a4a4a;
+  --neutral-400: #5a5a5a;
   --neutral-500: #969696;
+  --neutral-600: #cccccc;
+  --neutral-700: #e5e5e5;
+  --neutral-800: #ffffff;
 }
 
-/* Smooth transitions */
-* {
-  transition: background-color 0.2s ease, border-color 0.2s ease,
-    color 0.2s ease;
-}
-
-/* Focus styles for accessibility */
+/* Accessibility & Scrollbar */
 .control-button:focus {
   outline: 2px solid var(--accent-purple);
   outline-offset: 2px;
 }
 
-/* Custom scrollbar for modern look */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {

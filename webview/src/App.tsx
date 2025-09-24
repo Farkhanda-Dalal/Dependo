@@ -1,11 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import { Network } from "vis-network/standalone";
-import type { EnhancedGraphData } from '../../src/types/enhancedgraphdata.interface';
+import type { EnhancedGraphData } from "../../src/types/enhancedgraphdata.interface";
 import "./App.css";
 
 // Import the new components
-import GraphHeader from "./components/GraphHeader";
-import GraphControls from "./components/GraphControls";
+import Toolbar from "./components/Toolbar";
 import GraphStats from "./components/GraphStats";
 
 // Import the existing components
@@ -74,9 +73,13 @@ function App() {
   useEffect(() => {
     if (containerRef.current && filteredGraphData.nodes.length > 0) {
       // Use the new functions to create the data and options
-      const visData = createVisData(filteredGraphData, allGraphData, showCycles);
+      const visData = createVisData(
+        filteredGraphData,
+        allGraphData,
+        showCycles
+      );
       const options = createVisOptions(filteredGraphData);
-      
+
       const network = new Network(containerRef.current, visData, options);
       networkRef.current = network;
 
@@ -84,7 +87,10 @@ function App() {
         network.setOptions({ physics: false });
       });
 
-      network.fit();
+      // Add padding to the top of the graph area to avoid the stats bar
+      network.fit({
+        animation: false,
+      });
 
       const canvas = containerRef.current;
       network.on("hoverNode", () => {
@@ -104,12 +110,13 @@ function App() {
     }
   }, [filteredGraphData, showCycles, allGraphData.cycles]);
 
-    const fitNetwork = () => {
+  const fitNetwork = () => {
     if (networkRef.current) {
-      networkRef.current.fit();
+      networkRef.current.fit({
+        animation: false,
+      });
     }
   };
-
 
   const nodeCount = filteredGraphData.nodes.length;
   const edgeCount = filteredGraphData.links.length;
@@ -124,25 +131,31 @@ function App() {
 
   return (
     <div className="app-container">
-      <Sidebar folders={folders} onFolderClick={(folderPath) => handleFolderClick(folderPath, allGraphData, setFilteredGraphData)} />
-      <div className="main-content">
-        <CycleDetails cycles={allGraphData.cycles} show={showCycles} />
-        <div className="graph-panel">
-          <GraphHeader
-            handleSearch={(e) => handleSearch(e, allGraphData, setFilteredGraphData)}
-          />
-          <GraphControls
-            fitNetwork={fitNetwork}
-            handleDetectCycles={() => handleDetectCycles(allGraphData, showCycles, setShowCycles)}
-            showCycles={showCycles}
-          />
-        </div>
-        <GraphStats
-          nodeCount={nodeCount}
-          edgeCount={edgeCount}
-          cycleCount={allGraphData.cycles.length}
+      <Toolbar
+        handleSearch={(event) =>
+          handleSearch(event, allGraphData, setFilteredGraphData)
+        }
+        fitNetwork={fitNetwork}
+        handleDetectCycles={() =>
+          handleDetectCycles(allGraphData, showCycles, setShowCycles)
+        }
+        showCycles={showCycles}
+      />
+      <div className="content-container">
+        <Sidebar
+          folders={folders}
+          onFolderClick={(folderPath) =>
+            handleFolderClick(folderPath, allGraphData, setFilteredGraphData)
+          }
         />
-        <div ref={containerRef} className="graph-container"></div>
+        <div className="main-content">
+          <CycleDetails cycles={allGraphData.cycles} show={showCycles} />
+          <GraphStats
+            nodeCount={nodeCount}
+            edgeCount={edgeCount}
+          />
+          <div ref={containerRef} className="graph-container"></div>
+        </div>
       </div>
     </div>
   );

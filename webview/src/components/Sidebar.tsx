@@ -1,7 +1,7 @@
 // src/components/Sidebar.tsx
 import React from 'react';
 import FolderTree from './FolderTree';
-import '../Sidebar.css'
+import "../styles/Sidebar.css"
 import type { Folder } from '../types'; // <-- Import the new type
 
 interface SidebarProps {
@@ -12,7 +12,6 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ folders, onFolderClick }) => {
     return (
         <aside className="sidebar">
-            <h2 className="sidebar-title">Project Folders</h2>
             <div className="root-folder-item" onClick={() => onFolderClick('root')}>
                 <span className="folder-name">📂 Project Root</span>
             </div>

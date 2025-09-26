@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
-import { Network } from "vis-network/standalone";
+import { Network, type Node} from "vis-network/standalone"; // Added 'Edge' for completeness
+import { DataSet } from "vis-data/standalone";
 import type { EnhancedGraphData } from "../../src/types/enhancedgraphdata.interface";
 import "./App.css";
 
@@ -17,6 +18,7 @@ import CycleDetails from "./components/CycleDetails";
 import { handleSearch } from "./utils/handleSearch";
 import { handleDetectCycles } from "./utils/handleDetectCycles";
 import { handleFolderClick } from "./utils/handleFolderClick";
+import { handleDetectOrphans } from "./utils/handleOrphans";
 
 // Import the new configuration functions
 import { createVisOptions } from "./config/createVisOptions";
@@ -26,6 +28,8 @@ import { createVisData } from "./config/createVisData";
 interface VscodeApi {
   postMessage(message: unknown): void;
 }
+
+type SavedNodeOptions = Pick<Node, 'color' | 'font'>;
 
 declare global {
   interface Window {
@@ -50,8 +54,11 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [folders, setFolders] = useState({});
   const [showCycles, setShowCycles] = useState(false);
+  const [showOrphans, setShowOrphans] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const networkRef = useRef<Network | null>(null);
+    const nodesDataSetRef = useRef<DataSet<Node> | null>(null);
+  const originalNodeOptionsRef = useRef<Record<string | number, SavedNodeOptions>>({});
 
   useEffect(() => {
     setIsLoading(true);
@@ -72,49 +79,94 @@ function App() {
 
   useEffect(() => {
     if (containerRef.current && filteredGraphData.nodes.length > 0) {
-      // Use the new functions to create the data and options
-      const visData = createVisData(
+      const data = createVisData(
         filteredGraphData,
         allGraphData,
         showCycles
       );
-      const options = createVisOptions(filteredGraphData);
 
-      const network = new Network(containerRef.current, visData, options);
+      // The definitive fix: Check if data.nodes/edges are arrays before creating the DataSet.
+      // This guarantees we pass the correct type to the constructor.
+      const nodes = Array.isArray(data.nodes) ? data.nodes : [];
+      const edges = Array.isArray(data.edges) ? data.edges : [];
+
+      const nodesDataSet = new DataSet(nodes);
+      const edgesDataSet = new DataSet(edges);
+
+      nodesDataSetRef.current = nodesDataSet;
+
+      const networkData = {
+        nodes: nodesDataSet,
+        edges: edgesDataSet,
+      };
+
+      const options = createVisOptions(filteredGraphData);
+      
+      const network = new Network(containerRef.current, networkData, options);
       networkRef.current = network;
 
       network.on("stabilizationIterationsDone", () => {
         network.setOptions({ physics: false });
       });
 
-      // Add padding to the top of the graph area to avoid the stats bar
-      network.fit({
-        animation: false,
-      });
+      network.fit({ animation: false });
 
       const canvas = containerRef.current;
-      network.on("hoverNode", () => {
-        if (canvas) canvas.style.cursor = "pointer";
-      });
-      network.on("blurNode", () => {
-        if (canvas) canvas.style.cursor = "grab";
-      });
-      network.on("dragStart", () => {
-        if (canvas) canvas.style.cursor = "grabbing";
-      });
-      network.on("dragEnd", () => {
-        if (canvas) canvas.style.cursor = "grab";
-      });
+      network.on("hoverNode", () => { if (canvas) canvas.style.cursor = "pointer"; });
+      network.on("blurNode", () => { if (canvas) canvas.style.cursor = "grab"; });
+      network.on("dragStart", () => { if (canvas) canvas.style.cursor = "grabbing"; });
+      network.on("dragEnd", () => { if (canvas) canvas.style.cursor = "grab"; });
 
       if (canvas) canvas.style.cursor = "grab";
     }
   }, [filteredGraphData, showCycles, allGraphData.cycles]);
 
+  useEffect(() => {
+    const nodesDataSet = nodesDataSetRef.current;
+    const network = networkRef.current;
+    if (!nodesDataSet || !network || !allGraphData) return;
+  
+    const { nodes, links } = allGraphData;
+    const connectedNodeIds = new Set(links.flatMap(link => [link.source, link.target]));
+    const orphanNodeIds = nodes.filter(node => !connectedNodeIds.has(node.id)).map(node => node.id);
+  
+    if (showOrphans) {
+      const originalNodeData = nodesDataSet.get(orphanNodeIds);
+      const originalOptions: Record<string | number, SavedNodeOptions> = {};
+      originalNodeData.forEach(node => {
+        originalOptions[node.id] = { color: node.color, font: node.font };
+      });
+      originalNodeOptionsRef.current = originalOptions;
+  
+      const updatedNodes = orphanNodeIds.map(id => ({
+        id,
+        color: { background: '#ff4136', border: '#ff4136' },
+        font: { color: '#ffffff' },
+      }));
+      
+      if (updatedNodes.length > 0) {
+        nodesDataSet.update(updatedNodes);
+      }
+  
+      if (orphanNodeIds.length > 0) {
+        network.fit({ nodes: orphanNodeIds, animation: true });
+      }
+    } else {
+      const nodesToRevert = Object.keys(originalNodeOptionsRef.current).map(id => ({
+        id,
+        ...originalNodeOptionsRef.current[id],
+      }));
+  
+      if (nodesToRevert.length > 0) {
+        nodesDataSet.update(nodesToRevert);
+        originalNodeOptionsRef.current = {};
+      }
+    }
+  }, [showOrphans, allGraphData, filteredGraphData]);
+
   const fitNetwork = () => {
     if (networkRef.current) {
-      networkRef.current.fit({
-        animation: false,
-      });
+      networkRef.current.fit({ animation: false });
     }
   };
 
@@ -140,6 +192,10 @@ function App() {
           handleDetectCycles(allGraphData, showCycles, setShowCycles)
         }
         showCycles={showCycles}
+        handleDetectOrphans={() => 
+          handleDetectOrphans(allGraphData, showOrphans, setShowOrphans, setFilteredGraphData)
+        }
+        showOrphans={showOrphans}
       />
       <div className="content-container">
         <Sidebar

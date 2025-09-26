@@ -7,6 +7,8 @@ interface ToolbarProps {
   fitNetwork: () => void;
   handleDetectCycles: () => void;
   showCycles: boolean;
+  handleDetectOrphans: () => void;
+  showOrphans: boolean;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -14,6 +16,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
   fitNetwork,
   handleDetectCycles,
   showCycles,
+  handleDetectOrphans,
+  showOrphans,
 }) => {
   return (
     <div className="toolbar">
@@ -33,7 +37,12 @@ const Toolbar: React.FC<ToolbarProps> = ({
         >
           🔍 {showCycles ? 'Hide' : 'Detect'} Cycles
         </button>
-        <button className="control-button">Detect Orphan Files</button>
+        <button
+          className={`control-button ${showOrphans ? 'active' : ''}`}
+          onClick={handleDetectOrphans}
+        >
+          🗑️ {showOrphans ? 'Hide' : 'Detect'} Orphan Files
+        </button>
         <button className="control-button">Export Graph</button>
         
         {/* Search bar is the rightmost element */}

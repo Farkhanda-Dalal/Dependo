@@ -9,6 +9,7 @@ interface ToolbarProps {
   showCycles: boolean;
   handleDetectOrphans: () => void;
   showOrphans: boolean;
+  handleExportGraph: () => void; // Add the new prop here
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -18,6 +19,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   showCycles,
   handleDetectOrphans,
   showOrphans,
+  handleExportGraph, // Destructure the new prop
 }) => {
   return (
     <div className="toolbar">
@@ -43,7 +45,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
         >
           🗑️ {showOrphans ? 'Hide' : 'Detect'} Orphan Files
         </button>
-        <button className="control-button">Export Graph</button>
+        {/* Add the onClick handler to the export button */}
+        <button className="control-button" onClick={handleExportGraph}>
+          Export Graph
+        </button>
         
         {/* Search bar is the rightmost element */}
         <input

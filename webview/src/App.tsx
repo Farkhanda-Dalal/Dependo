@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Network, type Node} from "vis-network/standalone"; // Added 'Edge' for completeness
+import { Network, type Node } from "vis-network/standalone"; // Added 'Edge' for completeness
 import { DataSet } from "vis-data/standalone";
 import type { EnhancedGraphData } from "../../src/types/enhancedgraphdata.interface";
 import "./App.css";
@@ -29,7 +29,7 @@ interface VscodeApi {
   postMessage(message: unknown): void;
 }
 
-type SavedNodeOptions = Pick<Node, 'color' | 'font'>;
+type SavedNodeOptions = Pick<Node, "color" | "font">;
 
 declare global {
   interface Window {
@@ -57,8 +57,10 @@ function App() {
   const [showOrphans, setShowOrphans] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const networkRef = useRef<Network | null>(null);
-    const nodesDataSetRef = useRef<DataSet<Node> | null>(null);
-  const originalNodeOptionsRef = useRef<Record<string | number, SavedNodeOptions>>({});
+  const nodesDataSetRef = useRef<DataSet<Node> | null>(null);
+  const originalNodeOptionsRef = useRef<
+    Record<string | number, SavedNodeOptions>
+  >({});
 
   useEffect(() => {
     setIsLoading(true);
@@ -79,14 +81,8 @@ function App() {
 
   useEffect(() => {
     if (containerRef.current && filteredGraphData.nodes.length > 0) {
-      const data = createVisData(
-        filteredGraphData,
-        allGraphData,
-        showCycles
-      );
+      const data = createVisData(filteredGraphData, allGraphData, showCycles);
 
-      // The definitive fix: Check if data.nodes/edges are arrays before creating the DataSet.
-      // This guarantees we pass the correct type to the constructor.
       const nodes = Array.isArray(data.nodes) ? data.nodes : [];
       const edges = Array.isArray(data.edges) ? data.edges : [];
 
@@ -101,7 +97,7 @@ function App() {
       };
 
       const options = createVisOptions(filteredGraphData);
-      
+
       const network = new Network(containerRef.current, networkData, options);
       networkRef.current = network;
 
@@ -112,51 +108,84 @@ function App() {
       network.fit({ animation: false });
 
       const canvas = containerRef.current;
-      network.on("hoverNode", () => { if (canvas) canvas.style.cursor = "pointer"; });
-      network.on("blurNode", () => { if (canvas) canvas.style.cursor = "grab"; });
-      network.on("dragStart", () => { if (canvas) canvas.style.cursor = "grabbing"; });
-      network.on("dragEnd", () => { if (canvas) canvas.style.cursor = "grab"; });
+      network.on("hoverNode", () => {
+        if (canvas) canvas.style.cursor = "pointer";
+      });
+      network.on("blurNode", () => {
+        if (canvas) canvas.style.cursor = "grab";
+      });
+      network.on("dragStart", () => {
+        if (canvas) canvas.style.cursor = "grabbing";
+      });
+      network.on("dragEnd", () => {
+        if (canvas) canvas.style.cursor = "grab";
+      });
 
       if (canvas) canvas.style.cursor = "grab";
     }
   }, [filteredGraphData, showCycles, allGraphData.cycles]);
 
   useEffect(() => {
+    const network = networkRef.current;
+    if (!network) return;
+
+    if (showCycles && allGraphData.cycles.length > 0) {
+      const cycleNodeIds = [
+        ...new Set(allGraphData.cycles.flatMap((cycle) => cycle.nodes)),
+      ];
+
+      if (cycleNodeIds.length > 0) {
+        network.fit({ nodes: cycleNodeIds, animation: true });
+      }
+    }
+  }, [showCycles, allGraphData.cycles]);
+
+  useEffect(() => {
     const nodesDataSet = nodesDataSetRef.current;
     const network = networkRef.current;
     if (!nodesDataSet || !network || !allGraphData) return;
-  
+
     const { nodes, links } = allGraphData;
-    const connectedNodeIds = new Set(links.flatMap(link => [link.source, link.target]));
-    const orphanNodeIds = nodes.filter(node => !connectedNodeIds.has(node.id)).map(node => node.id);
-  
+    const connectedNodeIds = new Set(
+      links.flatMap((link) => [link.source, link.target])
+    );
+    const orphanNodeIds = nodes
+      .filter((node) => !connectedNodeIds.has(node.id))
+      .map((node) => node.id);
+
     if (showOrphans) {
       const originalNodeData = nodesDataSet.get(orphanNodeIds);
       const originalOptions: Record<string | number, SavedNodeOptions> = {};
-      originalNodeData.forEach(node => {
-        originalOptions[node.id] = { color: node.color, font: node.font };
+
+      originalNodeData.forEach((node) => {
+        originalOptions[node.id] = {
+          color: JSON.parse(JSON.stringify(node.color ?? null)),
+          font: JSON.parse(JSON.stringify(node.font ?? null)),
+        };
       });
       originalNodeOptionsRef.current = originalOptions;
-  
-      const updatedNodes = orphanNodeIds.map(id => ({
+
+      const updatedNodes = orphanNodeIds.map((id) => ({
         id,
-        color: { background: '#ff4136', border: '#ff4136' },
-        font: { color: '#ffffff' },
+        color: { background: "#ff4136", border: "#ff4136" },
+        font: { color: "#ffffff" },
       }));
-      
+
       if (updatedNodes.length > 0) {
         nodesDataSet.update(updatedNodes);
       }
-  
+
       if (orphanNodeIds.length > 0) {
         network.fit({ nodes: orphanNodeIds, animation: true });
       }
     } else {
-      const nodesToRevert = Object.keys(originalNodeOptionsRef.current).map(id => ({
-        id,
-        ...originalNodeOptionsRef.current[id],
-      }));
-  
+      const nodesToRevert = Object.keys(originalNodeOptionsRef.current).map(
+        (id) => ({
+          id,
+          ...originalNodeOptionsRef.current[id],
+        })
+      );
+
       if (nodesToRevert.length > 0) {
         nodesDataSet.update(nodesToRevert);
         originalNodeOptionsRef.current = {};
@@ -168,6 +197,29 @@ function App() {
     if (networkRef.current) {
       networkRef.current.fit({ animation: false });
     }
+  };
+
+  // NEW: Function to handle exporting the graph as a PNG
+  const handleExportGraph = () => {
+    const network = networkRef.current;
+    if (!network) return;
+
+    // Get the HTML canvas element that vis-network uses to draw the graph
+    const container = containerRef.current;
+    const canvas = container?.querySelector("canvas");
+
+    if (!canvas) return;
+
+    // Convert the canvas drawing to a PNG image data URL
+    const dataURL = (canvas as HTMLCanvasElement).toDataURL("image/png");
+
+    // Create a temporary link element to trigger the download
+    const link = document.createElement("a");
+    link.href = dataURL;
+    link.download = "dependency-graph.png"; // Set the desired file name
+
+    // Programmatically click the link to start the download
+    link.click();
   };
 
   const nodeCount = filteredGraphData.nodes.length;
@@ -192,10 +244,16 @@ function App() {
           handleDetectCycles(allGraphData, showCycles, setShowCycles)
         }
         showCycles={showCycles}
-        handleDetectOrphans={() => 
-          handleDetectOrphans(allGraphData, showOrphans, setShowOrphans, setFilteredGraphData)
+        handleDetectOrphans={() =>
+          handleDetectOrphans(
+            allGraphData,
+            showOrphans,
+            setShowOrphans,
+            setFilteredGraphData
+          )
         }
         showOrphans={showOrphans}
+        handleExportGraph={handleExportGraph} // Pass the new function as a prop
       />
       <div className="content-container">
         <Sidebar
@@ -206,10 +264,7 @@ function App() {
         />
         <div className="main-content">
           <CycleDetails cycles={allGraphData.cycles} show={showCycles} />
-          <GraphStats
-            nodeCount={nodeCount}
-            edgeCount={edgeCount}
-          />
+          <GraphStats nodeCount={nodeCount} edgeCount={edgeCount} />
           <div ref={containerRef} className="graph-container"></div>
         </div>
       </div>

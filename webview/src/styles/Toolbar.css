@@ -34,3 +34,43 @@
 .search-input::placeholder {
   color: var(--neutral-500);
 }
+
+.search-container {
+  position: relative;
+  display: inline-block;
+}
+
+.suggestions-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  /* NEW: Set a minimum width to match the input, but allow it to grow */
+  min-width: 100%; 
+  /* NEW: Make the box as wide as its longest content (file name) */
+  width: max-content; 
+  /* NEW: Set a max-width to prevent it from becoming too wide on very long paths */
+  max-width: 600px; 
+  background-color: white;
+  border: 1px solid #ccc;
+  border-top: none;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 0 0 4px 4px;
+}
+/* --- UPDATED STYLES END HERE --- */
+
+.suggestions-list li {
+  padding: 8px 12px;
+  cursor: pointer;
+  /* NEW: Prevent line breaks for long file names */
+  white-space: nowrap; 
+}
+
+.suggestions-list li:hover {
+  background-color: #f0f0f0;
+}

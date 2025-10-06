@@ -1,30 +1,25 @@
-import { useEffect, useState, useRef } from "react";
-import { Network, type Node } from "vis-network/standalone"; // Added 'Edge' for completeness
+import { useEffect, useState, useRef, useMemo } from "react"; // 1. IMPORT useMemo
+import { Network, type Node } from "vis-network/standalone";
 import { DataSet } from "vis-data/standalone";
 import type { EnhancedGraphData } from "../../src/types/enhancedgraphdata.interface";
 import "./App.css";
 
-// Import the new components
 import Toolbar from "./components/Toolbar";
 import GraphStats from "./components/GraphStats";
-
-// Import the existing components
 import LoadingState from "./components/LoadingState";
 import EmptyProject from "./components/EmptyProject";
 import Sidebar from "./components/Sidebar";
 import CycleDetails from "./components/CycleDetails";
 
-// Import the handler functions from the new utils file
-import { handleSearch } from "./utils/handleSearch";
+// 2. CHANGE the import to 'performSearch'
+import { performSearch } from "./utils/handleSearch";
 import { handleDetectCycles } from "./utils/handleDetectCycles";
 import { handleFolderClick } from "./utils/handleFolderClick";
 import { handleDetectOrphans } from "./utils/handleOrphans";
 
-// Import the new configuration functions
 import { createVisOptions } from "./config/createVisOptions";
 import { createVisData } from "./config/createVisData";
 
-// Create a specific type for the VS Code API
 interface VscodeApi {
   postMessage(message: unknown): void;
 }
@@ -38,7 +33,6 @@ declare global {
 }
 
 function App() {
-  //useState
   const [allGraphData, setAllGraphData] = useState<EnhancedGraphData>({
     nodes: [],
     links: [],
@@ -82,31 +76,22 @@ function App() {
   useEffect(() => {
     if (containerRef.current && filteredGraphData.nodes.length > 0) {
       const data = createVisData(filteredGraphData, allGraphData, showCycles);
-
       const nodes = Array.isArray(data.nodes) ? data.nodes : [];
       const edges = Array.isArray(data.edges) ? data.edges : [];
-
       const nodesDataSet = new DataSet(nodes);
       const edgesDataSet = new DataSet(edges);
-
       nodesDataSetRef.current = nodesDataSet;
-
       const networkData = {
         nodes: nodesDataSet,
         edges: edgesDataSet,
       };
-
       const options = createVisOptions(filteredGraphData);
-
       const network = new Network(containerRef.current, networkData, options);
       networkRef.current = network;
-
       network.on("stabilizationIterationsDone", () => {
         network.setOptions({ physics: false });
       });
-
       network.fit({ animation: false });
-
       const canvas = containerRef.current;
       network.on("hoverNode", () => {
         if (canvas) canvas.style.cursor = "pointer";
@@ -120,20 +105,17 @@ function App() {
       network.on("dragEnd", () => {
         if (canvas) canvas.style.cursor = "grab";
       });
-
       if (canvas) canvas.style.cursor = "grab";
     }
-  }, [filteredGraphData, showCycles, allGraphData, allGraphData.cycles]);
+  }, [filteredGraphData, showCycles, allGraphData.cycles]);
 
   useEffect(() => {
     const network = networkRef.current;
     if (!network) return;
-
     if (showCycles && allGraphData.cycles.length > 0) {
       const cycleNodeIds = [
         ...new Set(allGraphData.cycles.flatMap((cycle) => cycle.nodes)),
       ];
-
       if (cycleNodeIds.length > 0) {
         network.fit({ nodes: cycleNodeIds, animation: true });
       }
@@ -144,7 +126,6 @@ function App() {
     const nodesDataSet = nodesDataSetRef.current;
     const network = networkRef.current;
     if (!nodesDataSet || !network || !allGraphData) return;
-
     const { nodes, links } = allGraphData;
     const connectedNodeIds = new Set(
       links.flatMap((link) => [link.source, link.target])
@@ -152,11 +133,9 @@ function App() {
     const orphanNodeIds = nodes
       .filter((node) => !connectedNodeIds.has(node.id))
       .map((node) => node.id);
-
     if (showOrphans) {
       const originalNodeData = nodesDataSet.get(orphanNodeIds);
       const originalOptions: Record<string | number, SavedNodeOptions> = {};
-
       originalNodeData.forEach((node) => {
         originalOptions[node.id] = {
           color: JSON.parse(JSON.stringify(node.color ?? null)),
@@ -164,17 +143,14 @@ function App() {
         };
       });
       originalNodeOptionsRef.current = originalOptions;
-
       const updatedNodes = orphanNodeIds.map((id) => ({
         id,
         color: { background: "#ff4136", border: "#ff4136" },
         font: { color: "#ffffff" },
       }));
-
       if (updatedNodes.length > 0) {
         nodesDataSet.update(updatedNodes);
       }
-
       if (orphanNodeIds.length > 0) {
         network.fit({ nodes: orphanNodeIds, animation: true });
       }
@@ -185,7 +161,6 @@ function App() {
           ...originalNodeOptionsRef.current[id],
         })
       );
-
       if (nodesToRevert.length > 0) {
         nodesDataSet.update(nodesToRevert);
         originalNodeOptionsRef.current = {};
@@ -193,32 +168,33 @@ function App() {
     }
   }, [showOrphans, allGraphData, filteredGraphData]);
 
+  // 3. CREATE the allNodeIds list for autocomplete suggestions
+  const allNodeIds = useMemo(
+    () => allGraphData.nodes.map((node) => node.id),
+    [allGraphData.nodes]
+  );
+
+  // 4. CREATE a new search handler that calls performSearch
+  const runSearch = (query: string) => {
+    performSearch(query, allGraphData, setFilteredGraphData);
+  };
+
   const fitNetwork = () => {
     if (networkRef.current) {
       networkRef.current.fit({ animation: false });
     }
   };
 
-  // NEW: Function to handle exporting the graph as a PNG
   const handleExportGraph = () => {
     const network = networkRef.current;
     if (!network) return;
-
-    // Get the HTML canvas element that vis-network uses to draw the graph
-    const canvas =
-      containerRef.current?.getElementsByTagName("canvas")[0] ?? null;
-
+    const container = containerRef.current;
+    const canvas = container?.querySelector("canvas");
     if (!canvas) return;
-
-    // Convert the canvas drawing to a PNG image data URL
-    const dataURL = canvas.toDataURL("image/png");
-
-    // Create a temporary link element to trigger the download
+    const dataURL = (canvas as HTMLCanvasElement).toDataURL("image/png");
     const link = document.createElement("a");
     link.href = dataURL;
-    link.download = "dependency-graph.png"; // Set the desired file name
-
-    // Programmatically click the link to start the download
+    link.download = "dependency-graph.png";
     link.click();
   };
 
@@ -235,10 +211,10 @@ function App() {
 
   return (
     <div className="app-container">
+      {/* 5. UPDATE the props passed to Toolbar */}
       <Toolbar
-        handleSearch={(event) =>
-          handleSearch(event, allGraphData, setFilteredGraphData)
-        }
+        allNodeIds={allNodeIds}
+        onSearch={runSearch}
         fitNetwork={fitNetwork}
         handleDetectCycles={() =>
           handleDetectCycles(allGraphData, showCycles, setShowCycles)
@@ -253,7 +229,7 @@ function App() {
           )
         }
         showOrphans={showOrphans}
-        handleExportGraph={handleExportGraph} // Pass the new function as a prop
+        handleExportGraph={handleExportGraph}
       />
       <div className="content-container">
         <Sidebar

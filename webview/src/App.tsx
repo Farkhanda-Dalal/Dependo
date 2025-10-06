@@ -123,7 +123,7 @@ function App() {
 
       if (canvas) canvas.style.cursor = "grab";
     }
-  }, [filteredGraphData, showCycles, allGraphData.cycles]);
+  }, [filteredGraphData, showCycles, allGraphData, allGraphData.cycles]);
 
   useEffect(() => {
     const network = networkRef.current;
@@ -205,13 +205,13 @@ function App() {
     if (!network) return;
 
     // Get the HTML canvas element that vis-network uses to draw the graph
-    const container = containerRef.current;
-    const canvas = container?.querySelector("canvas");
+    const canvas =
+      containerRef.current?.getElementsByTagName("canvas")[0] ?? null;
 
     if (!canvas) return;
 
     // Convert the canvas drawing to a PNG image data URL
-    const dataURL = (canvas as HTMLCanvasElement).toDataURL("image/png");
+    const dataURL = canvas.toDataURL("image/png");
 
     // Create a temporary link element to trigger the download
     const link = document.createElement("a");

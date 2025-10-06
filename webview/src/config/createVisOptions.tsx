@@ -3,10 +3,13 @@ import type { EnhancedGraphData } from "../../../src/types/enhancedgraphdata.int
 
 /**
  * Creates the options object for the vis-network graph.
+ * @param isHorizontal A boolean to determine the layout direction.
  * @param filteredGraphData The filtered graph data, used to determine group physics.
  * @returns The vis-network Options object.
  */
-export const createVisOptions = (filteredGraphData: EnhancedGraphData): Options => {
+export const createVisOptions = (
+  filteredGraphData: EnhancedGraphData
+): Options => {
   const uniqueGroups = new Set<string>();
   filteredGraphData.nodes.forEach((node) => {
     const pathParts = node.id.split('/');
@@ -19,23 +22,8 @@ export const createVisOptions = (filteredGraphData: EnhancedGraphData): Options 
     groupPhysicsConfig[g] = { physics: true };
   });
 
-  return {
-    layout: {
-      improvedLayout: true,
-    },
-    physics: {
-      enabled: true,
-      barnesHut: {
-        gravitationalConstant: -25000,
-        centralGravity: 0.2,
-        springLength: 100,
-        springConstant: 0.05,
-        damping: 0.15,
-        avoidOverlap: 1,
-      },
-      minVelocity: 0.75,
-      solver: 'barnesHut',
-    },
+  // Base options shared by both layouts, preserving all your detailed settings
+  const baseOptions: Options = {
     nodes: {
       shape: 'box',
       font: {
@@ -46,14 +34,8 @@ export const createVisOptions = (filteredGraphData: EnhancedGraphData): Options 
       color: {
         background: '#f8fafc',
         border: '#0066cc',
-        highlight: {
-          background: '#dbeafe',
-          border: '#2563eb',
-        },
-        hover: {
-          background: '#eff6ff',
-          border: '#3b82f6',
-        },
+        highlight: { background: '#dbeafe', border: '#2563eb' },
+        hover: { background: '#eff6ff', border: '#3b82f6' },
       },
       margin: { top: 12, right: 16, bottom: 12, left: 16 },
       borderWidth: 2,
@@ -74,9 +56,7 @@ export const createVisOptions = (filteredGraphData: EnhancedGraphData): Options 
         inherit: false,
       },
       width: 2,
-      widthConstraint: {
-        maximum: 4,
-      },
+      widthConstraint: { maximum: 4 },
       font: {
         align: 'middle',
         size: 12,
@@ -85,18 +65,8 @@ export const createVisOptions = (filteredGraphData: EnhancedGraphData): Options 
         strokeWidth: 3,
         strokeColor: '#ffffff',
       },
-      arrows: {
-        to: {
-          enabled: true,
-          scaleFactor: 1.2,
-          type: 'arrow',
-        },
-      },
-      smooth: {
-        enabled: true,
-        type: 'dynamic',
-        roundness: 0.5,
-      },
+      arrows: { to: { enabled: true, scaleFactor: 1.2, type: 'arrow' } },
+      smooth: { enabled: true, type: 'dynamic', roundness: 0.5 },
       shadow: {
         enabled: true,
         color: 'rgba(59, 130, 246, 0.1)',
@@ -114,8 +84,28 @@ export const createVisOptions = (filteredGraphData: EnhancedGraphData): Options 
       zoomView: true,
     },
     groups: groupPhysicsConfig,
-    configure: {
-      enabled: false,
-    },
+    configure: { enabled: false },
   };
-};
+
+
+    // Options for your original, organic layout
+    return {
+      ...baseOptions,
+      layout: {
+        improvedLayout: true,
+      },
+      physics: {
+        enabled: true,
+        barnesHut: {
+          gravitationalConstant: -25000,
+          centralGravity: 0.2,
+          springLength: 100,
+          springConstant: 0.05,
+          damping: 0.15,
+          avoidOverlap: 1,
+        },
+        minVelocity: 0.75,
+        solver: 'barnesHut',
+      },
+    };
+  }

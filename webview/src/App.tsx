@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef, useMemo } from "react"; // 1. IMPORT useMemo
+// REFACTOR: Imported 'useCallback' to stabilize event handlers
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { Network, type Node } from "vis-network/standalone";
 import { DataSet } from "vis-data/standalone";
 import type { EnhancedGraphData } from "../../src/types/enhancedgraphdata.interface";
@@ -11,7 +12,6 @@ import EmptyProject from "./components/EmptyProject";
 import Sidebar from "./components/Sidebar";
 import CycleDetails from "./components/CycleDetails";
 
-// 2. CHANGE the import to 'performSearch'
 import { performSearch } from "./utils/handleSearch";
 import { handleDetectCycles } from "./utils/handleDetectCycles";
 import { handleFolderClick } from "./utils/handleFolderClick";
@@ -56,6 +56,7 @@ function App() {
     Record<string | number, SavedNodeOptions>
   >({});
 
+  // --- DATA FETCHING EFFECT ---
   useEffect(() => {
     setIsLoading(true);
     Promise.all([
@@ -73,6 +74,7 @@ function App() {
       });
   }, []);
 
+  // --- VIS-NETWORK INITIALIZATION EFFECT ---
   useEffect(() => {
     if (containerRef.current && filteredGraphData.nodes.length > 0) {
       const data = createVisData(filteredGraphData, allGraphData, showCycles);
@@ -109,6 +111,7 @@ function App() {
     }
   }, [filteredGraphData, showCycles, allGraphData.cycles]);
 
+  // --- CYCLE FITTING EFFECT ---
   useEffect(() => {
     const network = networkRef.current;
     if (!network) return;
@@ -122,6 +125,7 @@ function App() {
     }
   }, [showCycles, allGraphData.cycles]);
 
+  // --- ORPHAN HIGHLIGHTING EFFECT ---
   useEffect(() => {
     const nodesDataSet = nodesDataSetRef.current;
     const network = networkRef.current;
@@ -166,26 +170,39 @@ function App() {
         originalNodeOptionsRef.current = {};
       }
     }
-  }, [showOrphans, allGraphData, filteredGraphData]);
+    // REFACTOR 2: Removed 'filteredGraphData' from dependency array.
+    // It was not used inside this effect, and removing it prevents
+    // this logic from re-running unnecessarily (e.g., after a search).
+  }, [showOrphans, allGraphData]);
 
-  // 3. CREATE the allNodeIds list for autocomplete suggestions
+  // --- MEMOIZED VALUES ---
   const allNodeIds = useMemo(
     () => allGraphData.nodes.map((node) => node.id),
     [allGraphData.nodes]
   );
 
-  // 4. CREATE a new search handler that calls performSearch
-  const runSearch = (query: string) => {
-    performSearch(query, allGraphData, setFilteredGraphData);
-  };
+  // --- STABLE EVENT HANDLERS (useCallback) ---
+  
+  // REFACTOR 3: Wrapped 'runSearch' in useCallback.
+  // It now only re-creates if 'allGraphData' changes.
+  const runSearch = useCallback(
+    (query: string) => {
+      performSearch(query, allGraphData, setFilteredGraphData);
+    },
+    [allGraphData]
+  );
 
-  const fitNetwork = () => {
+  // REFACTOR 4: Wrapped 'fitNetwork' in useCallback.
+  // This function instance will be stable across all renders.
+  const fitNetwork = useCallback(() => {
     if (networkRef.current) {
       networkRef.current.fit({ animation: false });
     }
-  };
+  }, []); // No dependencies, as it only uses a ref.
 
-  const handleExportGraph = () => {
+  // REFACTOR 5: Wrapped 'handleExportGraph' in useCallback.
+  // This function instance will be stable across all renders.
+  const handleExportGraph = useCallback(() => {
     const network = networkRef.current;
     if (!network) return;
     const container = containerRef.current;
@@ -196,8 +213,32 @@ function App() {
     link.href = dataURL;
     link.download = "dependency-graph.png";
     link.click();
-  };
+  }, []); // No dependencies, as it only uses refs.
 
+  // REFACTOR 6: Created stable handlers for Toolbar props.
+  // This prevents new functions from being passed on every render.
+  const onDetectCycles = useCallback(() => {
+    handleDetectCycles(allGraphData, showCycles, setShowCycles);
+  }, [allGraphData, showCycles]);
+
+  const onDetectOrphans = useCallback(() => {
+    handleDetectOrphans(
+      allGraphData,
+      showOrphans,
+      setShowOrphans,
+      setFilteredGraphData
+    );
+  }, [allGraphData, showOrphans]);
+
+  // REFACTOR 7: Created a stable handler for Sidebar props.
+  const onFolderClick = useCallback(
+    (folderPath: string) => {
+      handleFolderClick(folderPath, allGraphData, setFilteredGraphData);
+    },
+    [allGraphData]
+  );
+
+  // --- RENDER LOGIC ---
   const nodeCount = filteredGraphData.nodes.length;
   const edgeCount = filteredGraphData.links.length;
 
@@ -211,33 +252,20 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* 5. UPDATE the props passed to Toolbar */}
+      {/* REFACTOR 8: Updated Toolbar props to use stable handlers */}
       <Toolbar
         allNodeIds={allNodeIds}
         onSearch={runSearch}
         fitNetwork={fitNetwork}
-        handleDetectCycles={() =>
-          handleDetectCycles(allGraphData, showCycles, setShowCycles)
-        }
+        handleDetectCycles={onDetectCycles}
         showCycles={showCycles}
-        handleDetectOrphans={() =>
-          handleDetectOrphans(
-            allGraphData,
-            showOrphans,
-            setShowOrphans,
-            setFilteredGraphData
-          )
-        }
+        handleDetectOrphans={onDetectOrphans}
         showOrphans={showOrphans}
         handleExportGraph={handleExportGraph}
       />
       <div className="content-container">
-        <Sidebar
-          folders={folders}
-          onFolderClick={(folderPath) =>
-            handleFolderClick(folderPath, allGraphData, setFilteredGraphData)
-          }
-        />
+        {/* REFACTOR 9: Updated Sidebar props to use stable handler */}
+        <Sidebar folders={folders} onFolderClick={onFolderClick} />
         <div className="main-content">
           <CycleDetails cycles={allGraphData.cycles} show={showCycles} />
           <GraphStats nodeCount={nodeCount} edgeCount={edgeCount} />

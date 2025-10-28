@@ -1,8 +1,17 @@
 import React, { useState } from "react";
 import '../styles/Toolbar.css'
+import {
+  TbFocusCentered,
+  TbRepeat,
+  TbFileOff,
+  TbFileExport,
+} from "react-icons/tb";
+// --- 1. IMPORT YOUR LOGO ---
+import logo from '../assets/logo.png';
 
 // Define the props that the Toolbar component will receive
 interface ToolbarProps {
+  // ... (all your props remain the same)
   allNodeIds: string[];
   onSearch: (query: string) => void;
   fitNetwork: () => void;
@@ -23,11 +32,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
   showOrphans,
   handleExportGraph,
 }) => {
-  // State for the search query and suggestions
+  // ... (all your state and handlers remain the same)
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
-  // Handler for input changes to update suggestions
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
@@ -35,25 +43,23 @@ const Toolbar: React.FC<ToolbarProps> = ({
     if (value.length > 0) {
       const filteredSuggestions = allNodeIds
         .filter((id) => id.toLowerCase().includes(value.toLowerCase()))
-        .slice(0, 10); // Limit to 10 suggestions
+        .slice(0, 10);
       setSuggestions(filteredSuggestions);
     } else {
       setSuggestions([]);
     }
   };
 
-  // Handler for clicking a suggestion
   const handleSuggestionClick = (suggestion: string) => {
     setQuery(suggestion);
     setSuggestions([]);
-    onSearch(suggestion); // Trigger the search
+    onSearch(suggestion);
   };
 
-  // Handler for pressing Enter
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       setSuggestions([]);
-      onSearch(query); // Trigger the search
+      onSearch(query);
     }
   };
 
@@ -61,7 +67,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
     <>
       <div className="toolbar">
         <div className="project-name">
-          <h1 className="text-xl font-bold">dependo</h1>
+          {/* --- 2. REPLACED H1 WITH IMG TAG --- */}
+          <img src={logo} alt="Dependo Logo" className="project-logo" width="190px" height="60px"/>
         </div>
         <div className="toolbar-controls">
           <div className="search-container">
@@ -86,23 +93,51 @@ const Toolbar: React.FC<ToolbarProps> = ({
               </ul>
             )}
           </div>
-          <button className="control-button" onClick={fitNetwork}>
-            🎯 Fit View
+
+          {/* --- 3. MODIFIED BUTTONS (ICON + SPAN) --- */}
+
+          <button
+            className="control-button"
+            onClick={fitNetwork}
+            title="Fit View"
+            aria-label="Fit View"
+          >
+            <TbFocusCentered size={20} />
+            <span>Fit View</span>
           </button>
+
           <button
             className={`control-button ${showCycles ? "active" : ""}`}
             onClick={handleDetectCycles}
+            title={showCycles ? "Hide Cycles" : "Detect Cycles"}
+            aria-label={showCycles ? "Hide Cycles" : "Detect Cycles"}
           >
-            🔍 {showCycles ? "Hide" : "Detect"} Cycles
+            <TbRepeat size={20} />
+            {/* The label text is now dynamic */}
+            <span>{showCycles ? "Hide" : "Cycles"}</span>
           </button>
+
           <button
             className={`control-button ${showOrphans ? "active" : ""}`}
             onClick={handleDetectOrphans}
+            title={showOrphans ? "Hide Orphan Files" : "Detect Orphan Files"}
+            aria-label={
+              showOrphans ? "Hide Orphan Files" : "Detect Orphan Files"
+            }
           >
-            🗑️ {showOrphans ? "Hide" : "Detect"} Orphan Files
+            <TbFileOff size={20} />
+            {/* The label text is now dynamic */}
+            <span>{showOrphans ? "Hide" : "Orphans"}</span>
           </button>
-          <button className="control-button" onClick={handleExportGraph}>
-            Export Graph
+
+          <button
+            className="control-button"
+            onClick={handleExportGraph}
+            title="Export Graph"
+            aria-label="Export Graph"
+          >
+            <TbFileExport size={20} />
+            <span>Export</span>
           </button>
         </div>
       </div>
@@ -111,4 +146,3 @@ const Toolbar: React.FC<ToolbarProps> = ({
 };
 
 export default Toolbar;
-

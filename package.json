@@ -37,10 +37,12 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
+    "@types/ioredis": "^4.28.10",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/resolve": "^1.20.6",
     "@types/vscode": "^1.104.0",
+    "@types/vscode-webview": "^1.57.5",
     "@typescript-eslint/eslint-plugin": "^8.42.0",
     "@typescript-eslint/parser": "^8.42.0",
     "@vscode/test-cli": "^0.0.11",
@@ -52,6 +54,7 @@
   },
   "dependencies": {
     "@babel/parser": "^7.28.4",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "ioredis": "^5.8.2"
   }
 }

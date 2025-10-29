@@ -1,5 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import '../styles/Toolbar.css'
+import logo from '../assets/logo.png';
+import { useDebounce } from '../hooks/useDebounce';
+
 
 import {
   TbFocusCentered,
@@ -7,12 +10,9 @@ import {
   TbFileOff,
   TbFileExport,
 } from "react-icons/tb";
-// --- 1. IMPORT YOUR LOGO ---
-import logo from '../assets/logo.png';
 
 // Define the props that the Toolbar component will receive
 interface ToolbarProps {
-  // ... (all your props remain the same)
   allNodeIds: string[];
   onSearch: (query: string) => void;
   fitNetwork: () => void;
@@ -33,23 +33,33 @@ const Toolbar: React.FC<ToolbarProps> = ({
   showOrphans,
   handleExportGraph,
 }) => {
-  // ... (all your state and handlers remain the same)
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setQuery(value);
+  // REFACTOR: Create a debounced version of the query.
+  // The filtering logic will use this value.
+  const debouncedQuery = useDebounce(query, 250); // 250ms delay
 
-    if (value.length > 0) {
+  // REFACTOR: The input handler is now very simple.
+  // It only updates the query state, which is fast.
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
+  };
+
+  // REFACTOR: The expensive filtering logic is moved into a useEffect
+  // that runs *only* when the debouncedQuery changes.
+  useEffect(() => {
+    if (debouncedQuery.length > 0) {
       const filteredSuggestions = allNodeIds
-        .filter((id) => id.toLowerCase().includes(value.toLowerCase()))
+        // Use the debouncedQuery for filtering
+        .filter((id) => id.toLowerCase().includes(debouncedQuery.toLowerCase()))
         .slice(0, 10);
       setSuggestions(filteredSuggestions);
     } else {
       setSuggestions([]);
     }
-  };
+    // This effect now depends on the debounced value, not the instant query
+  }, [debouncedQuery, allNodeIds]);
 
   const handleSuggestionClick = (suggestion: string) => {
     setQuery(suggestion);
@@ -60,6 +70,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       setSuggestions([]);
+      // We use the *immediate* query here so "Enter" feels instant
       onSearch(query);
     }
   };
@@ -94,8 +105,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
             )}
           </div>
 
-          {/* --- 3. MODIFIED BUTTONS (ICON + SPAN) --- */}
-
           <button
             className="control-button"
             onClick={fitNetwork}
@@ -113,7 +122,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
             aria-label={showCycles ? "Hide Cycles" : "Detect Cycles"}
           >
             <TbRepeat size={20} />
-            {/* The label text is now dynamic */}
             <span>{showCycles ? "Hide" : "Cycles"}</span>
           </button>
 
@@ -126,7 +134,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
             }
           >
             <TbFileOff size={20} />
-            {/* The label text is now dynamic */}
             <span>{showOrphans ? "Hide" : "Orphans"}</span>
           </button>
 

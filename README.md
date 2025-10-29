@@ -1,7 +1,7 @@
 # Welcome to Dependo
 
 ## Visualize your codebase. Spot cycles fast. Ship cleaner architecture.
-<Center>
+<div align="center">
 <img src="./webview//src//assets/logo.png" width="500" alt="Dependency Graph">
 
 Dependo is a powerful VS Code extension that turns your JavaScript and TypeScript projects into an **interactive dependency graph**. </br>
@@ -10,7 +10,7 @@ It visualizes your project’s architecture by generating dependency graphs, det
 
 Explore your codebase like never before — see how every file connects.</br>
 Built for developers who crave clarity, maintainability, and smarter refactoring.
-</Center>
+</div>
 
 ### ✨ Key Features
 
@@ -47,7 +47,9 @@ Built for developers who crave clarity, maintainability, and smarter refactoring
 #### Autocomplete Sugestions:
 <img src="./webview//src//assets/Autocomplete Suggestions.png" width="100%" alt="Dependency Graph">
 
-![Dependo Demo](./webview/src/assets/Dependo.mp4)
+#### Zoom, Fit, Pan:
+[![Watch the demo](./webview/src/assets/Dependo.mp4)](https://github.com/Farkhanda-Dalal/Dependo/blob/main/webview/src/assets/Dependo.mp4)
+
 
 
 

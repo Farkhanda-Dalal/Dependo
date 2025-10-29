@@ -1,72 +1,55 @@
-README 
-# dependencygraph README
+# Welcome to Dependo
 
-This is the README for your extension "dependencygraph". After writing up a brief description, we recommend including the following sections.
+## Visualize your codebase. Spot cycles fast. Ship cleaner architecture.
+<Center>
+<img src="./webview//src//assets/logo.png" width="500" alt="Dependency Graph">
 
-## Features
+Dependo is a powerful VS Code extension that turns your JavaScript and TypeScript projects into an **interactive dependency graph**. </br>
+It visualizes your project’s architecture by generating dependency graphs, detecting circular dependencies, finding orphan files, and enabling file-level dependency search.
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
 
-For example if there is an image subfolder under your extension project workspace:
+Explore your codebase like never before — see how every file connects.</br>
+Built for developers who crave clarity, maintainability, and smarter refactoring.
+</Center>
 
-\!\[feature X\]\(images/feature-x.png\)
+### ✨ Key Features
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+* **Interactive Dependency Graph:** Pan, zoom, select, and focus nodes for instant context and clearer visualization of file relationships.
+* **Cycle Detection:** **See circular dependencies** with clear, navigable cycle details to avoid unexpected bugs and improve module decoupling.
+* **Orphan Highlighting:** Easily surface files that aren’t connected to the main dependency graph (e.g., unused or experimental files).
+* **Exportable Graphs:** Save the dependency graph as a PNG file to share or analyze elsewhere.
+* **Folder-Aware Navigation:** Browse your files via a familiar tree and jump directly to graph selections.
+* **Smart Search:** Find files/modules fast and instantly spotlight their relationships within the graph, enabled with auto-complete capabilities.
+* **Import Relationship Inspection:** Click any edge between two nodes to see the exact import statements creating the dependency.
+* **Built-in Stats:** Get a snapshot of file count, dependencies, and potential hotspots (Avg. Deps).
+* **Lightweight and Fast:** Built using a React + Vite webview for a smooth, responsive in-editor experience.
 
-## Requirements
+## 📸 Dependo in Action
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+#### Dependency Graph Display:
+<img src="./webview//src//assets/Graph.png" width="100%" alt="Dependency Graph">
 
-## Extension Settings
+#### Cyclic Dependecy Detection:
+<img src="./webview//src//assets/CyclicDependecy.png" width="100%" alt="Dependency Graph">
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+#### Orphan File Detection:
+<img src="./webview//src//assets/OrphanFile.png" width="100%" alt="Dependency Graph">
 
-For example:
+#### Import Relationship Inspection:
+<img src="./webview//src//assets/EdgeRelation.png" width="100%" alt="Dependency Graph">
 
-This extension contributes the following settings:
+#### File Level Depedency Graph:
+<img src="./webview//src//assets/FileDependecies.png" width="100%" alt="Dependency Graph">
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+#### Folder Level Depedency Graph:
+<img src="./webview//src//assets/FolderDep.png" width="100%" alt="Dependency Graph">
 
-## Known Issues
+#### Autocomplete Sugestions:
+<img src="./webview//src//assets/Autocomplete Suggestions.png" width="100%" alt="Dependency Graph">
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+![Dependo Demo](./webview/src/assets/Dependo.mp4)
 
-## Release Notes
 
-Users appreciate release notes as you update your extension.
 
-### 1.0.0
 
-Initial release of ...
 
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**

@@ -1,4 +1,4 @@
-import { type Data} from 'vis-network/standalone';
+import { type Data } from 'vis-network';
 import type { EnhancedGraphData } from '../../../src/types/enhancedgraphdata.interface';
 
 /**
@@ -8,6 +8,7 @@ import type { EnhancedGraphData } from '../../../src/types/enhancedgraphdata.int
  * @param showCycles A boolean indicating whether to highlight cycles.
  * @returns The vis-network Data object.
  */
+// REFACTOR: Renamed function back to createVisData
 export const createVisData = (
   filteredGraphData: EnhancedGraphData,
   allGraphData: EnhancedGraphData,
@@ -25,15 +26,30 @@ export const createVisData = (
   );
 
   const nodesWithGroups = filteredGraphData.nodes.map((node) => {
-    const relativePath = node.id;
-    const pathParts = relativePath.split('/');
+    const fullRelativePath = node.id; 
+    const pathParts = fullRelativePath.split('/');
+
+    // By default, the display path is the full path
+    let displayPath = fullRelativePath;
+    
+    // If the path has more than one part (e.g., "rootFolder/file.js"),
+    // slice off the first part (the root folder) for the display label.
+    if (pathParts.length > 1) {
+      displayPath = pathParts.slice(1).join('/'); // Becomes "Backend/services/..."
+    }
+    
+    // Also, improved truncation to show the *end* of the file, which is more useful
+    const label = displayPath.length > 20 
+      ? `...${displayPath.substring(displayPath.length - 17)}` // e.g., "...ptain.service.js"
+      : displayPath;
+
     const group = pathParts.length > 1 ? pathParts[0] : 'root';
     const isCycleNode = cycleNodeIds.has(node.id);
 
     return {
-      id: node.id,
-      label: node.id.length > 20 ? `${node.id.substring(0, 20)}...` : node.id,
-      title: node.id,
+      id: node.id, // ID remains the full, unique path for logic
+      label: label, // Use the new, cleaner label for display
+      title: node.id, // Tooltip (on hover) still shows the full, correct path
       group,
       color: isCycleNode
         ? {

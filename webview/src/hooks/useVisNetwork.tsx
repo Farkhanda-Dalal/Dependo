@@ -6,9 +6,6 @@ import type { EnhancedGraphData } from '../../../src/types/enhancedgraphdata.int
 import { createVisData } from '../config/createVisData';
 import { createVisOptions } from '../config/createVisOptions';
 
-/**
- * Custom hook to initialize and manage the vis-network instance.
- */
 export const useVisNetwork = (
   containerRef: React.RefObject<HTMLDivElement>,
   filteredGraphData: EnhancedGraphData,
@@ -19,7 +16,10 @@ export const useVisNetwork = (
   const nodesDataSetRef = useRef<DataSet<Node> | null>(null);
 
   useEffect(() => {
+    // Check if the container is ready and there's data to render
     if (containerRef.current && filteredGraphData.nodes.length > 0) {
+      
+      // 1. Call createVisData to get nodes/edges
       const data = createVisData(filteredGraphData, allGraphData, showCycles);
       const nodes = Array.isArray(data.nodes) ? data.nodes : [];
       const edges = Array.isArray(data.edges) ? data.edges : [];
@@ -33,7 +33,10 @@ export const useVisNetwork = (
         edges: edgesDataSet,
       };
 
+      // 2. Call createVisOptions to get the config
       const options = createVisOptions(filteredGraphData);
+      
+      // 3. Create the Network
       const network = new Network(containerRef.current, networkData, options);
       networkRef.current = network;
 
@@ -59,7 +62,7 @@ export const useVisNetwork = (
       });
       if (canvas) canvas.style.cursor = 'grab';
 
-      // Cleanup function to destroy network instance on unmount or re-render
+      // Cleanup function
       return () => {
         if (networkRef.current) {
           networkRef.current.destroy();
@@ -68,8 +71,7 @@ export const useVisNetwork = (
       };
     }
   }, [filteredGraphData, showCycles, allGraphData, containerRef]);
-  // Note: allGraphData is included because createVisData depends on allGraphData.cycles
 
+  // Return the refs, just as App.tsx expects
   return { networkRef, nodesDataSetRef };
 };
-

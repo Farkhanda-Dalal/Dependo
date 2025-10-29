@@ -1,0 +1,83 @@
+.import-details-panel {
+  /* Positioning */
+  position: absolute;
+  top: 5rem;
+  right: 0.25rem;
+  z-index: 10; 
+
+  /* Sizing */
+  width: 350px;
+  max-width: 90vw;
+  max-height: 50vh; 
+  overflow-y: auto;
+
+  /* Appearance */
+  background-color: var(--neutral-100);
+  border: var(--border-width) solid var(--neutral-300);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-lg);
+  padding: 1rem;
+}
+
+.import-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: var(--border-width) solid var(--neutral-200);
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.import-details-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--neutral-800);
+}
+
+.import-details-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5rem;
+  font-weight: 300;
+  line-height: 1;
+  padding: 0 0.25rem;
+  color: var(--neutral-500);
+}
+
+.import-details-close-btn:hover {
+  color: var(--neutral-800);
+}
+
+.import-sentence {
+  padding: 0.5rem;
+  font-size: 0.75rem; /* A good readable size */
+  line-height: 1.6; /* Spacing for readability */
+  word-wrap: break-word; /* Ensure long paths wrap */
+  background-color: var(--neutral-50);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--border-radius);
+}
+
+.import-verb {
+  color: var(--neutral-600); /* A softer text color for "imports" and "from" */
+  margin: 0 4px;
+}
+
+.import-sentence code {
+  /* This is the style we used before, which matches the 'From:' and 'To:' fields */
+  font-family: monospace;
+  background-color: var(--neutral-200);
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: var(--primary-blue-dark);
+}
+
+.import-specifier {
+  /* Make the imported function/variable stand out */
+  font-weight: 600;
+  color: var(--primary-blue); /* A bit brighter */
+  background-color: var(--secondary-blue);
+  border: 1px solid var(--primary-blue-light);
+}

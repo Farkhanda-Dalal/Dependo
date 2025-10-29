@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { promises as fs } from "fs"; // Use the 'promises' API for async operations
 import { parse } from "@babel/parser";
-import { ExpressionStatement, VariableDeclaration } from "@babel/types";
+import { ImportDeclaration, ExpressionStatement, VariableDeclaration } from "@babel/types";
 
 import { EnhancedGraphData } from "../types/enhancedgraphdata.interface";
 import { GraphData } from "../types/graphdata.interface";
@@ -61,6 +61,7 @@ async function processFile(
               : imported.value;
           }
         });
+      // --- THIS 'else if' BLOCK HANDLES 'require' ---
       } else if (
         (node.type === "VariableDeclaration" || node.type === "ExpressionStatement") &&
         isRequireCall(node)
@@ -69,6 +70,23 @@ async function processFile(
         const expression = node.type === "VariableDeclaration" ? node.declarations[0].init : node.expression;
         if (expression?.type === "CallExpression" && expression.arguments[0].type === "StringLiteral") {
              importPath = expression.arguments[0].value;
+        }
+
+        // This is the only code I added to this file.
+        // It checks for destructuring: const { a, b } = require('...')
+        if (node.type === "VariableDeclaration" && node.declarations[0].id.type === "ObjectPattern") {
+          specifiers = node.declarations[0].id.properties.map(prop => {
+            if (prop.type === "ObjectProperty" && prop.key.type === "Identifier") {
+              // This handles: { funcA }
+              // This also handles: { funcA: localFuncA } (it takes 'funcA')
+              return prop.key.name; 
+            }
+            if (prop.type === "RestElement" && prop.argument.type === "Identifier") {
+              // This handles: { ...rest }
+               return `...${prop.argument.name}`;
+            }
+            return null; // Fallback for unhandled property types
+          }).filter((name): name is string => name !== null); // Filter out nulls
         }
       }
 

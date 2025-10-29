@@ -8,6 +8,9 @@ import LoadingState from './components/LoadingState';
 import EmptyProject from './components/EmptyProject';
 import Sidebar from './components/Sidebar';
 import CycleDetails from './components/CycleDetails';
+import ImportDetails from './components/ImportDetails';
+// 1. Import GraphData from its correct location (assuming path from useVisNetwork)
+import type { GraphData } from '../../src/types/graphdata.interface';
 
 // Utility Imports
 import { performSearch } from './utils/handleSearch';
@@ -31,6 +34,9 @@ declare global {
   }
 }
 
+// 2. Define our Link type using GraphData
+type Link = GraphData['links'][number];
+
 function App() {
   // --- State Definitions ---
   // Core data state is now managed by our custom hook
@@ -46,16 +52,30 @@ function App() {
   const [showCycles, setShowCycles] = useState(false);
   const [showOrphans, setShowOrphans] = useState(false);
 
+  // 3. Use our corrected 'Link' type
+  const [selectedEdge, setSelectedEdge] = useState<Link | null>(null);
+
   // --- Refs ---
   // Ref for the DOM container
   const containerRef = useRef<HTMLDivElement>(null!);
+
+  // 4. Define the handlers *before* they are used in the hook
+  const onEdgeClick = useCallback((edge: Link) => {
+    setSelectedEdge(edge);
+  }, []); // setSelectedEdge is stable, no dependency needed
+
+  const onClearSelection = useCallback(() => {
+    setSelectedEdge(null);
+  }, []); // No dependencies
 
   // Refs for network and nodes are now managed by the useVisNetwork hook
   const { networkRef, nodesDataSetRef } = useVisNetwork(
     containerRef,
     filteredGraphData,
     allGraphData,
-    showCycles
+    showCycles,
+    onEdgeClick,
+    onClearSelection
   );
 
   // --- Custom Hook Effects ---
@@ -72,7 +92,6 @@ function App() {
   );
 
   // --- STABLE EVENT HANDLERS (useCallback) ---
-  // These are unchanged, as their logic and dependencies remain the same.
   const runSearch = useCallback(
     (query: string) => {
       performSearch(query, allGraphData, setFilteredGraphData);
@@ -99,6 +118,8 @@ function App() {
     link.click();
   }, [networkRef, containerRef]); // Dependencies on ref objects are stable
 
+  // (The handlers we moved were here)
+
   const onDetectCycles = useCallback(() => {
     handleDetectCycles(allGraphData, showCycles, setShowCycles);
   }, [allGraphData, showCycles]); // setShowCycles is stable
@@ -120,7 +141,6 @@ function App() {
   );
 
   // --- RENDER LOGIC ---
-  // This logic is completely unchanged.
   const nodeCount = filteredGraphData.nodes.length;
   const edgeCount = filteredGraphData.links.length;
 
@@ -134,7 +154,6 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* Props passed to components are unchanged */}
       <Toolbar
         allNodeIds={allNodeIds}
         onSearch={runSearch}
@@ -149,8 +168,15 @@ function App() {
         <Sidebar folders={folders} onFolderClick={onFolderClick} />
         <div className="main-content">
           <CycleDetails cycles={allGraphData.cycles} show={showCycles} />
+
+          {selectedEdge && (
+            <ImportDetails
+              edge={selectedEdge}
+              onClose={() => setSelectedEdge(null)}
+            />
+          )}
+
           <GraphStats nodeCount={nodeCount} edgeCount={edgeCount} />
-          {/* The container ref is attached here, as before */}
           <div ref={containerRef} className="graph-container"></div>
         </div>
       </div>

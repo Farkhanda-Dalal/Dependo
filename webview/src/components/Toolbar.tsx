@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import '../styles/Toolbar.css'
+
 import {
   TbFocusCentered,
   TbRepeat,
@@ -67,7 +68,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
     <>
       <div className="toolbar">
         <div className="project-name">
-          {/* --- 2. REPLACED H1 WITH IMG TAG --- */}
           <img src={logo} alt="Dependo Logo" className="project-logo" width="190px" height="60px"/>
         </div>
         <div className="toolbar-controls">

@@ -26,6 +26,11 @@ Built for developers who crave clarity, maintainability, and smarter refactoring
 
 ## 📸 Dependo in Action
 
+#### Zoom, Fit, Pan:
+<a href="https://github.com/Farkhanda-Dalal/Dependo/blob/main/webview/src/assets/Dependo.mp4">
+  <img src="https://github.com/Farkhanda-Dalal/Dependo/blob/main/webview/src/assets/Dependo-ezgif.com-video-to-gif-converter.gif" width="100%" alt="Dependency Graph">
+</a>
+
 #### Dependency Graph Display:
 <img src="./webview//src//assets/Graph.png" width="100%" alt="Dependency Graph">
 
@@ -47,8 +52,9 @@ Built for developers who crave clarity, maintainability, and smarter refactoring
 #### Autocomplete Sugestions:
 <img src="./webview//src//assets/Autocomplete Suggestions.png" width="100%" alt="Dependency Graph">
 
-#### Zoom, Fit, Pan:
-[![Watch the demo](./webview/src/assets/Dependo.mp4)](https://github.com/Farkhanda-Dalal/Dependo/blob/main/webview/src/assets/Dependo.mp4)
+
+
+
 
 
 
